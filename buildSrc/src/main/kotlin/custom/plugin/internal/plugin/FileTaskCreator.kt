@@ -17,19 +17,22 @@ import java.io.File
 class FileTaskCreator(private val project: Project, private val artifactHolder: ArtifactHolder) {
 
     fun create() {
+        // create transform first
+        if (project.properties["android.transform"] == "true") {
+            createTransform()
+        }
+
+        // create final consumer
+        project.tasks.register("finalFile", InternalFileConsumerTask::class.java) {
+            it.inputArtifact.set(artifactHolder.getArtifact(SingleFileArtifactType.MANIFEST))
+        }
+
+        // create the original producer last
         val originTask = project.tasks.register("originFile", InternalFileProducerTask::class.java) {
             it.outputArtifact.set(File(project.buildDir, "foo.txt"))
         }
 
         artifactHolder.produces(SingleFileArtifactType.MANIFEST, originTask.flatMap { it.outputArtifact })
-
-        project.tasks.register("finalFile", InternalFileConsumerTask::class.java) {
-            it.inputArtifact.set(artifactHolder.getArtifact(SingleFileArtifactType.MANIFEST))
-        }
-
-        if (project.properties["android.transform"] == "true") {
-            createTransform()
-        }
     }
 
     private fun createTransform() {

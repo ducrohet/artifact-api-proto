@@ -44,11 +44,25 @@ class SingleFileHolder(project: Project): SingleArtifactHolder<SingleFileArtifac
 }
 
 class SingleArtifactInfo<ValueT>(
-        val finalArtifact: Property<ValueT>
+        val finalArtifact: Property<ValueT>,
+        currentArtifactProperty: Property<ValueT>,
+        private val firstArtifact: Property<ValueT>
 ) {
-    lateinit var currentArtifact: Provider<ValueT>
-    val isInitialized: Boolean
-        get() = ::currentArtifact.isInitialized
+    var isInitialized: Boolean = false
+        private set
+
+    var currentArtifact: Provider<ValueT>
+
+    fun setFirstArtifact(artifact: Provider<ValueT>) {
+        firstArtifact.set(artifact)
+        isInitialized = true
+    }
+
+    init {
+        currentArtifactProperty.set(firstArtifact)
+        currentArtifact = currentArtifactProperty
+        finalArtifact.set(currentArtifact)
+    }
 }
 
 abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, ProviderT>, ValueT, ProviderT : Provider<ValueT>>(protected val project: Project) {
@@ -58,7 +72,7 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
     protected abstract fun newProperty(): Property<ValueT>
 
     protected fun init(artifactType: ArtifactT) {
-        map[artifactType] = SingleArtifactInfo(newProperty())
+        map[artifactType] = SingleArtifactInfo(newProperty(), newProperty(), newProperty())
     }
 
     fun getArtifact(artifactType : ArtifactT) : Provider<ValueT> =
@@ -70,8 +84,7 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             throw RuntimeException("Artifact $artifactType already initialized")
         }
 
-        info.finalArtifact.set(artifact)
-        info.currentArtifact = artifact
+        info.setFirstArtifact(artifact)
     }
 
     fun <TaskT> transform(
@@ -80,13 +93,10 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactConsumer<ValueT>, TaskT: ArtifactProducer<ValueT> {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
-        if (!info.isInitialized) {
-            throw RuntimeException("Artifact $artifactType was not initialized")
-        }
-
-        val newTask = project.tasks.register(taskName, taskClass)
 
         val previousLatest = info.currentArtifact
+
+        val newTask = project.tasks.register(taskName, taskClass)
 
         // get provider for the newer version of the artifact
         val newLatest = newTask.flatMap { it.outputArtifact }

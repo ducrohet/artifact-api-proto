@@ -17,19 +17,22 @@ import java.io.File
 class DirTaskCreator(private val project: Project, private val artifactHolder: ArtifactHolder) {
 
     fun create() {
+        // create transform first
+        if (project.properties["android.transform"] == "true") {
+            createTransform()
+        }
+
+        // create final consumer
+        project.tasks.register("finalDir", InternalDirectoryConsumerTask::class.java) {
+            it.inputArtifact.set(artifactHolder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES))
+        }
+
+        // create the original producer last
         val originTask = project.tasks.register("originDir", InternalDirectoryProducerTask::class.java) {
             it.outputArtifact.set(File(project.buildDir, "foo"))
         }
 
         artifactHolder.produces(SingleDirectoryArtifactType.MERGED_RESOURCES, originTask.flatMap { it.outputArtifact })
-
-        project.tasks.register("finalDir", InternalDirectoryConsumerTask::class.java) {
-            it.inputArtifact.set(artifactHolder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES))
-        }
-
-        if (project.properties["android.transform"] == "true") {
-            createTransform()
-        }
     }
 
     private fun createTransform() {
