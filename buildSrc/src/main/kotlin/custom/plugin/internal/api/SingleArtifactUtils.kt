@@ -1,3 +1,4 @@
+@file:Suppress("UnstableApiUsage")
 package custom.plugin.internal.api
 
 import custom.plugin.api.*
@@ -14,46 +15,63 @@ import org.gradle.api.tasks.TaskProvider
 import java.io.File
 import java.util.*
 
-@Suppress("UnstableApiUsage")
 class SingleDirectoryHolder(project: Project): SingleArtifactHolder<SingleDirectoryArtifactType, Directory, Provider<Directory>>(project) {
 
-    override val wrapperMap = EnumMap<SingleDirectoryArtifactType, Property<Directory>>(SingleDirectoryArtifactType::class.java)
-    override val latestMap = EnumMap<SingleDirectoryArtifactType, Provider<Directory>>(SingleDirectoryArtifactType::class.java)
+    override val map = EnumMap<SingleDirectoryArtifactType, SingleArtifactInfo<Directory>>(SingleDirectoryArtifactType::class.java)
 
-    override fun newWrapper(): Property<Directory> = project.objects.directoryProperty()
+    override fun newProperty(): Property<Directory> = project.objects.directoryProperty()
     override fun newLocation() = File(project.buildDir, "foo2")
+
+    init {
+        for (artifact in SingleDirectoryArtifactType.values()) {
+            init(artifact)
+        }
+    }
 }
 
-@Suppress("UnstableApiUsage")
 class SingleFileHolder(project: Project): SingleArtifactHolder<SingleFileArtifactType, RegularFile, Provider<RegularFile>>(project) {
 
-    override val wrapperMap = EnumMap<SingleFileArtifactType, Property<RegularFile>>(SingleFileArtifactType::class.java)
-    override val latestMap = EnumMap<SingleFileArtifactType, Provider<RegularFile>>(SingleFileArtifactType::class.java)
+    override val map = EnumMap<SingleFileArtifactType, SingleArtifactInfo<RegularFile>>(SingleFileArtifactType::class.java)
 
-    override fun newWrapper(): Property<RegularFile> = project.objects.fileProperty()
+    override fun newProperty(): Property<RegularFile> = project.objects.fileProperty()
     override fun newLocation() = File(project.buildDir, "foo2.txt")
+
+    init {
+        for (artifact in SingleFileArtifactType.values()) {
+            init(artifact)
+        }
+    }
 }
 
-@Suppress("UnstableApiUsage")
+class SingleArtifactInfo<ValueT>(
+        val finalArtifact: Property<ValueT>
+) {
+    lateinit var currentArtifact: Provider<ValueT>
+    val isInitialized: Boolean
+        get() = ::currentArtifact.isInitialized
+}
+
 abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, ProviderT>, ValueT, ProviderT : Provider<ValueT>>(protected val project: Project) {
 
-    protected abstract val wrapperMap: MutableMap<ArtifactT, Property<ValueT>>
-    protected abstract val latestMap: MutableMap<ArtifactT, Provider<ValueT>>
+    protected abstract val map: MutableMap<ArtifactT, SingleArtifactInfo<ValueT>>
 
-    protected abstract fun newWrapper(): Property<ValueT>
+    protected abstract fun newProperty(): Property<ValueT>
+
+    protected fun init(artifactType: ArtifactT) {
+        map[artifactType] = SingleArtifactInfo(newProperty())
+    }
 
     fun getArtifact(artifactType : ArtifactT) : Provider<ValueT> =
-            wrapperMap[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+            map[artifactType]?.finalArtifact ?: throw RuntimeException("Did not find artifact for $artifactType")
 
     fun produces(artifactType : ArtifactT, artifact: Provider<ValueT>) {
-        if (wrapperMap.containsKey(artifactType)) {
-            throw RuntimeException("singleDirMap already contains $artifactType")
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+        if (info.isInitialized) {
+            throw RuntimeException("Artifact $artifactType already initialized")
         }
 
-        val wrapper = newWrapper()
-        wrapper.set(artifact)
-        wrapperMap[artifactType] = wrapper
-        latestMap[artifactType] = artifact
+        info.finalArtifact.set(artifact)
+        info.currentArtifact = artifact
     }
 
     fun <TaskT> transform(
@@ -61,18 +79,21 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             taskName: String,
             taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactConsumer<ValueT>, TaskT: ArtifactProducer<ValueT> {
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+        if (!info.isInitialized) {
+            throw RuntimeException("Artifact $artifactType was not initialized")
+        }
 
         val newTask = project.tasks.register(taskName, taskClass)
 
-        val wrapper = wrapperMap[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
-        val previousLatest = latestMap[artifactType]?: throw RuntimeException("Did not find artifact for $artifactType")
+        val previousLatest = info.currentArtifact
 
         // get provider for the newer version of the artifact
         val newLatest = newTask.flatMap { it.outputArtifact }
 
-        // update wrapper and latest
-        wrapper.set(newLatest)
-        latestMap[artifactType] = newLatest
+        // update final and current
+        info.finalArtifact.set(newLatest)
+        info.currentArtifact = newLatest
 
         newTask.configure {
             // set input value and register input with sensitivity

@@ -75,7 +75,7 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
         // create a new property?
         val newLatest = newWrapper().also { w -> w.add(newTask.flatMap { it.outputArtifact })}
 
-        // update wrapper and latest
+        // update wrapper and currentArtifact
 
         wrapper.set(newLatest)
         latestMap[artifactType] = newLatest
