@@ -27,7 +27,9 @@ interface ArtifactHolder {
      * @param artifactType the type of the artifact
      * @return the artifact as a provider containing both value and task dependency information
      */
-    fun <ValueT, ProviderT: Provider<ValueT>> getArtifact(artifactType : SingleArtifactType<ValueT, ProviderT>) : Provider<ValueT>
+    fun <ValueT, ProviderT: Provider<ValueT>> getArtifact(
+            artifactType : SingleArtifactType<ValueT, ProviderT>
+    ) : Provider<ValueT>
 
     /**
      * Returns an artifact as a [Provider] of iterable [RegularFile] or [Directory]
@@ -38,7 +40,9 @@ interface ArtifactHolder {
      * @param artifactType the type of the artifact
      * @return the artifact as a provider containing both value and task dependency information
      */
-    fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(artifactType : MultiArtifactType<ValueT, ProviderT>) : Provider<out Iterable<ValueT>>
+    fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
+            artifactType : MultiArtifactType<ValueT, ProviderT>
+    ) : Provider<out Iterable<ValueT>>
 
     /**
      * INTERNAL ONLY

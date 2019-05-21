@@ -2,3 +2,4 @@
 /.gradle
 /buildSrc/build
 /buildSrc/.gradle
+/.idea

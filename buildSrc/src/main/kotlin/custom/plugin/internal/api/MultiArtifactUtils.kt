@@ -18,7 +18,9 @@ import java.io.File
 import java.util.*
 
 @Suppress("UnstableApiUsage")
-class MultiFileHolder(project: Project): MultiArtifactHolder<MultiFileArtifactType, RegularFile, Provider<out Iterable<RegularFile>>>(project) {
+class MultiFileHolder(
+        project: Project
+): MultiArtifactHolder<MultiFileArtifactType, RegularFile, Provider<out Iterable<RegularFile>>>(project) {
 
     override val finalWrapperMap = EnumMap<MultiFileArtifactType, ListProperty<RegularFile>>(MultiFileArtifactType::class.java)
     override val appendWrapperMap = EnumMap<MultiFileArtifactType, ListProperty<RegularFile>>(MultiFileArtifactType::class.java)
