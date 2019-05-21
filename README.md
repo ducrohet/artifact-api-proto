@@ -3,9 +3,11 @@ Small prototype of an API allowing people to manipulate build intermediates and 
 This allows users of the API to read, append and transform artifacts in a way that makes it work if multiple API users (e.g. plugins or code in build.gradle) where to use the API in random order.
 
 To test, run one of the following tasks:
-finalFile, finalDir, finalFileList
+- finalFile
+- finalDir
+- finalFileList
 
-with or without -Pandroid.transform=true/false.
+with or without `-Pandroid.transform=true/false`.
 
 e.g.:
-	./gradlew -Pandroid.transform=true finalDir --rerun-tasks
+	`./gradlew -Pandroid.transform=true finalDir --rerun-tasks`
