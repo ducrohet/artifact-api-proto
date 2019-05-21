@@ -10,7 +10,8 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.TaskProvider
 
 /**
  * Base API for manipulating artifacts.
@@ -167,6 +168,8 @@ interface ArtifactHolder {
             taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit
     ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: FileProducerTask
+
+
 }
 
 
