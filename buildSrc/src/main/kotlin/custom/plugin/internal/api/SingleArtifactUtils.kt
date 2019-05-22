@@ -94,20 +94,20 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             configAction: (TaskT) -> Unit) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactConsumer<ValueT>, TaskT: ArtifactProducer<ValueT> {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
 
-        val previousLatest = info.currentArtifact
+        val previousCurrent = info.currentArtifact
 
         val newTask = project.tasks.register(taskName, taskClass)
 
         // get provider for the newer version of the artifact
-        val newLatest = newTask.flatMap { it.outputArtifact }
+        val newCurrent = newTask.flatMap { it.outputArtifact }
 
         // update final and current
-        info.finalArtifact.set(newLatest)
-        info.currentArtifact = newLatest
+        info.finalArtifact.set(newCurrent)
+        info.currentArtifact = newCurrent
 
         newTask.configure {
             // set input value and register input with sensitivity
-            it.inputArtifact.set(previousLatest)
+            it.inputArtifact.set(previousCurrent)
             val inputBuilder: TaskInputFilePropertyBuilder = when (val input = it.inputArtifact) {
                 is DirectoryProperty -> {
                     it.inputs.dir(input)

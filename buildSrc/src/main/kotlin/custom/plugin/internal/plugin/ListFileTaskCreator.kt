@@ -18,19 +18,22 @@ import java.io.File
 class ListFileTaskCreator(private val project: Project, private val artifactHolder: ArtifactHolder) {
 
     fun create() {
+        // create transform first
+        if (project.properties["android.transform"] == "true") {
+            createTransformAndAppend()
+        }
+
+        // create final consumer
+        project.tasks.register("finalFileList", InternalFileListConsumerTask::class.java) {
+            it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
+        }
+
+        // create the original producer last
         val originTask = project.tasks.register("originFileList", InternalFileProducerTask::class.java) {
             it.outputArtifact.set(File(project.buildDir, "foo.txt"))
         }
 
         artifactHolder.produces(MultiFileArtifactType.DEX, originTask.flatMap { it.outputArtifact })
-
-        project.tasks.register("finalFileList", InternalFileListConsumerTask::class.java) {
-            it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
-        }
-
-        if (project.properties["android.transform"] == "true") {
-            createTransformAndAppend()
-        }
     }
 
     private fun createTransformAndAppend() {

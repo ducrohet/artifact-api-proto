@@ -24,7 +24,8 @@ public class FileTaskCreator {
 
     public void create() {
         // create transform first
-        if (project.getProperties().get("android.transform").equals("true")) {
+        Object propValue = project.getProperties().get("android.transform");
+        if (propValue != null && propValue.equals("true")) {
             createTransform();
         }
 
