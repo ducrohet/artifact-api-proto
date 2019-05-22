@@ -22,7 +22,10 @@ interface InputInfoProvider {
 /**
  * Base for artifacts only handling a single file or directory
  */
-interface SingleArtifactType<ValueT, ProviderT: Provider<ValueT>> : InputInfoProvider
+interface SingleArtifactType<ValueT, ProviderT: Provider<ValueT>> : InputInfoProvider {
+    val isOutput: Boolean
+
+}
 
 /**
  * Base for artifacts being able to handle either a list of file or a list of directory.
@@ -39,14 +42,17 @@ interface MultiArtifactType<ValueT, ProviderT: Provider<out Iterable<ValueT>>> :
 
 enum class SingleFileArtifactType(
         override val sensitivity: PathSensitivity,
-        override val normalizer: Class<out FileNormalizer>? = null
+        override val normalizer: Class<out FileNormalizer>? = null,
+        override val isOutput: Boolean = false
 ): SingleArtifactType<RegularFile, Provider<RegularFile>> {
-    MANIFEST(PathSensitivity.NONE);
+    MERGED_MANIFEST(PathSensitivity.NAME_ONLY),
+    PACKAGE(PathSensitivity.NONE, isOutput = true)
 }
 
 enum class SingleDirectoryArtifactType(
         override val sensitivity: PathSensitivity,
-        override val normalizer: Class<out FileNormalizer>? = null
+        override val normalizer: Class<out FileNormalizer>? = null,
+        override val isOutput: Boolean = false
 ): SingleArtifactType<Directory, Provider<Directory>> {
     MERGED_RESOURCES(PathSensitivity.NONE);
 }
@@ -55,6 +61,7 @@ enum class MultiFileArtifactType(
         override val sensitivity: PathSensitivity,
         override val normalizer: Class<out FileNormalizer>? = null
 ): MultiArtifactType<RegularFile, Provider<out Iterable<RegularFile>>> {
+    JAR(PathSensitivity.NONE),
     DEX(PathSensitivity.NONE);
 }
 

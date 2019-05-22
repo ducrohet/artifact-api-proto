@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 
@@ -24,12 +25,12 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
 
     override fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> getArtifact(
             artifactType : SingleArtifactType<ValueT, ProviderT>
-    ) : Provider<ValueT> = when (artifactType) {
+    ) : ProviderT = when (artifactType) {
         is SingleDirectoryArtifactType -> {
-            singleDir.getArtifact(artifactType) as Provider<ValueT>
+            singleDir.getArtifact(artifactType) as ProviderT
         }
         is SingleFileArtifactType -> {
-            singleFile.getArtifact(artifactType) as Provider<ValueT>
+            singleFile.getArtifact(artifactType) as ProviderT
         }
         else -> {
             throw RuntimeException("unsupported SingleArtifactType")
@@ -38,9 +39,9 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
 
     override fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
             artifactType : MultiArtifactType<ValueT, ProviderT>
-    ) : Provider<out Iterable<ValueT>> = when (artifactType) {
+    ) : ProviderT = when (artifactType) {
         is MultiFileArtifactType -> {
-            multiFile.getArtifact(artifactType) as Provider<out Iterable<ValueT>>
+            multiFile.getArtifact(artifactType) as ProviderT
         }
         is MultiDirectoryArtifactType -> {
             TODO("")
@@ -50,16 +51,24 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> produces(
+    /**
+     * Register the original producer of the given artifact.
+     *
+     * @param artifactType the artifact to update
+     * @param taskProvider the task that generates the first version of the artifact
+     * @param outputProvider a provider that returns the [Property] that contains the output
+     */
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>, TaskT: DefaultTask> produces(
             artifactType : SingleArtifactType<ValueT, ProviderT>,
-            artifact: Provider<ValueT>
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> Property<ValueT>
     ) {
         when (artifactType) {
             is SingleDirectoryArtifactType -> {
-                singleDir.produces(artifactType, artifact as Provider<Directory>)
+                singleDir.produces(artifactType, taskProvider, outputProvider as ((TaskT) -> Property<Directory>))
             }
             is SingleFileArtifactType -> {
-                singleFile.produces(artifactType, artifact as Provider<RegularFile>)
+                singleFile.produces(artifactType, taskProvider, outputProvider  as ((TaskT) -> Property<RegularFile>))
             }
             else -> {
                 throw RuntimeException("unsupported SingleArtifactType")
@@ -67,13 +76,21 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> produces(
+    /**
+     * Register the original producer of the given artifact.
+     *
+     * @param artifactType the artifact to update
+     * @param taskProvider the task that generates the first version of the artifact
+     * @param outputProvider a provider that returns the [Property] that contains the output
+     */
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>, TaskT: DefaultTask> produces(
             artifactType : MultiArtifactType<ValueT, ProviderT>,
-            artifact: Provider<ValueT>
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> Property<ValueT>
     ) {
         when (artifactType) {
             is MultiFileArtifactType -> {
-                multiFile.produces(artifactType, artifact as Provider<RegularFile>)
+                multiFile.produces(artifactType, taskProvider, outputProvider  as ((TaskT) -> Property<RegularFile>))
             }
             is MultiDirectoryArtifactType -> {
                 TODO("")
@@ -142,5 +159,10 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
                 taskName,
                 taskClass,
                 configAction)
+    }
+
+    fun finalizeLocations() {
+        singleFile.finalizeLocations()
+        singleDir.finalizeLocations()
     }
 }

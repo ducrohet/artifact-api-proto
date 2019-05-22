@@ -8,7 +8,6 @@ import core.api.SingleFileArtifactType
 import core.internal.impl.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import java.io.File
 
 class CorePlugin: Plugin<Project> {
 
@@ -27,66 +26,65 @@ class CorePlugin: Plugin<Project> {
     }
 
     private fun createTasks(artifactHolder: ArtifactHolderImpl) {
-        createDirectoryTasks(artifactHolder)
-        createFileTasks(artifactHolder)
+        createManifestMerger(artifactHolder)
+        createResourceMerger(artifactHolder)
+        createCompilerAndDexer(artifactHolder)
         createListDirectoryTasks(artifactHolder)
-        createListFileTasks(artifactHolder)
+
+        val packageTask = project.tasks.register("packageApk", PackageTask::class.java) {
+            it.manifest.set(artifactHolder.getArtifact(SingleFileArtifactType.MERGED_MANIFEST))
+            it.mergedResources.set(artifactHolder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES))
+            it.dexFiles.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
+        }
+
+        artifactHolder.produces(SingleFileArtifactType.PACKAGE, packageTask, { it.outputApk })
+
+
+        project.tasks.register("assemble") {
+            it.dependsOn(artifactHolder.getArtifact(SingleFileArtifactType.PACKAGE))
+        }
+
+        artifactHolder.finalizeLocations()
     }
 
-    private fun createDirectoryTasks(artifactHolder: ArtifactHolderImpl) {
-        // create final consumer
-        project.tasks.register("finalDir", InternalDirectoryConsumerTask::class.java) {
-            it.inputArtifact.set(artifactHolder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES))
-        }
-
+    private fun createResourceMerger(artifactHolder: ArtifactHolderImpl) {
         // create the original producer last
-        val originTask = project.tasks.register(
-                "originDir",
-                InternalDirectoryProducerTask::class.java) {
-            it.outputArtifact.set(File(project.buildDir, "foo"))
-        }
+        val task = project.tasks.register(
+                "resourceMerger",
+                InternalDirectoryProducerTask::class.java) { }
 
-        artifactHolder.produces(SingleDirectoryArtifactType.MERGED_RESOURCES, originTask.flatMap { it.outputArtifact })
+        artifactHolder.produces(SingleDirectoryArtifactType.MERGED_RESOURCES, task, { it.outputArtifact })
     }
 
-    private fun createFileTasks(artifactHolder: ArtifactHolderImpl) {
-        // create final consumer
-        project.tasks.register(
-                "finalFile",
-                InternalFileConsumerTask::class.java
-        ) { task ->
-            task.inputArtifact.set(artifactHolder.getArtifact(SingleFileArtifactType.MANIFEST))
-        }
-
+    private fun createManifestMerger(artifactHolder: ArtifactHolderImpl) {
         // create the original producer last
-        val originTask = project.tasks.register(
-                "originFile",
+        val task = project.tasks.register(
+                "manifestMerger",
                 InternalFileProducerTask::class.java
-        ) {
-            task -> task.outputArtifact.set(File(project.buildDir, "foo.txt"))
-        }
+        ) { }
 
-        artifactHolder.produces(SingleFileArtifactType.MANIFEST, originTask.flatMap { it.outputArtifact })
+        artifactHolder.produces(SingleFileArtifactType.MERGED_MANIFEST, task, { it.outputArtifact })
     }
 
     private fun createListDirectoryTasks(artifactHolder: ArtifactHolderImpl) {
 
     }
 
-    private fun createListFileTasks(artifactHolder: ArtifactHolderImpl) {
-        // create final consumer
-        project.tasks.register("finalFileList", InternalFileListConsumerTask::class.java) {
-            it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
-        }
-
+    private fun createCompilerAndDexer(artifactHolder: ArtifactHolderImpl) {
         // create the original producer last
-        val originTask = project.tasks.register(
-                "originFileList",
+        val compiler = project.tasks.register(
+                "compileCode",
                 InternalFileProducerTask::class.java) {
-            it.outputArtifact.set(File(project.buildDir, "foo.txt"))
         }
 
-        artifactHolder.produces(MultiFileArtifactType.DEX, originTask.flatMap { it.outputArtifact })
-    }
+        artifactHolder.produces(MultiFileArtifactType.JAR, compiler, { it.outputArtifact })
 
+        val dexer = project.tasks.register(
+                "dexer",
+                InternalFileTransformerTask::class.java) {
+            it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.JAR))
+        }
+
+        artifactHolder.produces(MultiFileArtifactType.DEX, dexer, { it.outputArtifact })
+    }
 }

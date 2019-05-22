@@ -17,11 +17,27 @@ class SingleDirectoryHolder(project: Project): SingleArtifactHolder<SingleDirect
     override val map = EnumMap<SingleDirectoryArtifactType, SingleArtifactInfo<Directory>>(SingleDirectoryArtifactType::class.java)
 
     override fun newProperty(): Property<Directory> = project.objects.directoryProperty()
-    override fun newLocation() = File(project.buildDir, "foo2")
+
+    override fun newIntermediateProperty(artifactType: SingleDirectoryArtifactType, taskName: String): DirectoryProperty =
+            project.objects.directoryProperty().also {
+        it.set(newIntermediateLocation(artifactType, taskName))
+    }
+
+    override fun newIntermediateLocation(artifactType: SingleDirectoryArtifactType, taskName: String) =
+            File(project.buildDir, "intermediates/$taskName/$artifactType")
+
+    override fun newOutputLocation(artifactType: SingleDirectoryArtifactType): File =
+            File(project.buildDir, "outputs/${artifactType.toString().toLowerCase()}")
 
     init {
         for (artifact in SingleDirectoryArtifactType.values()) {
             init(artifact)
+        }
+    }
+
+    fun finalizeLocations() {
+        SingleDirectoryArtifactType.values().filter { it.isOutput }.forEach {
+            finalizeLocation(it)
         }
     }
 }
@@ -31,33 +47,118 @@ class SingleFileHolder(project: Project): SingleArtifactHolder<SingleFileArtifac
     override val map = EnumMap<SingleFileArtifactType, SingleArtifactInfo<RegularFile>>(SingleFileArtifactType::class.java)
 
     override fun newProperty(): Property<RegularFile> = project.objects.fileProperty()
-    override fun newLocation() = File(project.buildDir, "foo2.txt")
+    override fun newIntermediateProperty(artifactType: SingleFileArtifactType, taskName: String): RegularFileProperty =
+            project.objects.fileProperty().also {
+                it.set(newIntermediateLocation(artifactType, taskName))
+            }
+
+    override fun newIntermediateLocation(artifactType: SingleFileArtifactType, taskName: String) =
+            File(project.buildDir, "intermediates/$taskName/$artifactType.txt")
+
+    override fun newOutputLocation(artifactType: SingleFileArtifactType): File =
+            File(project.buildDir, "outputs/${artifactType.toString().toLowerCase()}.txt")
 
     init {
         for (artifact in SingleFileArtifactType.values()) {
             init(artifact)
         }
     }
+
+    fun finalizeLocations() {
+        SingleFileArtifactType.values().filter { it.isOutput }.forEach {
+            finalizeLocation(it)
+        }
+    }
 }
 
-class SingleArtifactInfo<ValueT>(
-        val finalArtifact: Property<ValueT>,
-        currentArtifactProperty: Property<ValueT>,
-        private val firstArtifact: Property<ValueT>
+/**
+ * class that holds the info for a given artifact.
+ *
+ * It contains references to the current last version of the artifact, a dynamic final artifact property, etc..
+ */
+class SingleArtifactInfo<ValueT: FileSystemLocation>(
+        propertyProvider: () -> Property<ValueT>
 ) {
+    /**
+     * Wrapper around the first provider. This is used to handle transforms while the task that produce the first
+     * version of the artifact has not yet been set.
+     */
+    private val firstArtifact: Property<ValueT> = propertyProvider()
+
+    /**
+     * Final Artifact. Always the final value of the artifact. This is dynamic and is updated as new transforms
+     * are added.
+     */
+    val finalArtifact: Property<ValueT> = propertyProvider()
+
+    /**
+     * whether the very first artifact version was generated
+     */
     var isInitialized: Boolean = false
         private set
 
-    var currentArtifact: Provider<ValueT>
+    /**
+     * Whether transforms have been set on the artifact
+     */
+    var hasTransforms: Boolean = false
+        private set
 
+    /**
+     * The current artifact version. Every new transform updates this to the output of the new transform
+     *
+     * @see [SingleArtifactInfo.setNewOutput]
+     */
+    private var currentArtifact: Provider<ValueT>
+
+    /**
+     * an optional final artifact location.
+     *
+     * This is used as the source for currentArtifact.
+     * Instead of doing <code>currentArtifact.set(File)</code> we do
+     * <code>
+     *     currentArtifact.set(provider)
+     *     finalArtifactLocation = provider
+     * </code>
+     *
+     * Later, we'll go back and edit the location of the finalArtifactProvider which is the wrapper on
+     * the location of the last task transforming the artifact.
+     */
+    lateinit var finalArtifactLocation: Property<ValueT>
+
+    /**
+     * indicate whether there is a finalArtifactLocation.
+     *
+     * This generally returns false if the artifact is not an output
+     */
+    val isFinalLocationInitialized: Boolean
+        get() = ::finalArtifactLocation.isInitialized
+
+    /**
+     * Sets the value of the first artifact.
+     * This can only be called once.
+     */
     fun setFirstArtifact(artifact: Provider<ValueT>) {
         firstArtifact.set(artifact)
         isInitialized = true
     }
 
+    /**
+     * Sets a new output and return the old one
+     */
+    fun setNewOutput(artifact: Provider<ValueT>): Provider<ValueT> {
+        hasTransforms = true
+
+        val oldCurrent = currentArtifact
+
+        // update final and current
+        finalArtifact.set(artifact)
+        currentArtifact = artifact
+
+        return oldCurrent
+    }
+
     init {
-        currentArtifactProperty.set(firstArtifact)
-        currentArtifact = currentArtifactProperty
+        currentArtifact = firstArtifact
         finalArtifact.set(currentArtifact)
     }
 }
@@ -68,22 +169,58 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
 
     protected abstract val map: MutableMap<ArtifactT, SingleArtifactInfo<ValueT>>
 
+    /**
+     * Returns a new Property object of the right type.
+     */
     protected abstract fun newProperty(): Property<ValueT>
 
+    /**
+     * Returns a new property, initialized with an intermediate location for the given artifact and task name
+     */
+    protected abstract fun newIntermediateProperty(artifactType: ArtifactT, taskName: String): Property<ValueT>
+    /**
+     * Returns an intermediate location for the given artifact and task name
+     */
+    protected abstract fun newIntermediateLocation(artifactType: ArtifactT, taskName: String): File
+    /**
+     * Returns an intermediate location for the given artifact and task name
+     */
+    protected abstract fun newOutputLocation(artifactType: ArtifactT): File
+
     protected fun init(artifactType: ArtifactT) {
-        map[artifactType] = SingleArtifactInfo(newProperty(), newProperty(), newProperty())
+        map[artifactType] = SingleArtifactInfo(::newProperty)
     }
 
     fun getArtifact(artifactType : ArtifactT) : Provider<ValueT> =
             map[artifactType]?.finalArtifact ?: throw RuntimeException("Did not find artifact for $artifactType")
 
-    fun produces(artifactType : ArtifactT, artifact: Provider<ValueT>) {
+    fun <TaskT: DefaultTask> produces(
+            artifactType: ArtifactT,
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> Property<ValueT>
+    ) {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
         if (info.isInitialized) {
             throw RuntimeException("Artifact $artifactType already initialized")
         }
 
-        info.setFirstArtifact(artifact)
+        // set the first artifact wrapper to the actual output.
+        info.setFirstArtifact(taskProvider.flatMap { outputProvider(it) })
+
+        taskProvider.configure {
+            // if the artifact is an output and there's no transform on it, then this output
+            // if the final output and should be in the output folder.
+            // otherwise, it needs to go in intermediate.
+            val location: File = if (artifactType.isOutput && !info.hasTransforms)
+                newOutputLocation(artifactType)
+            else
+                newIntermediateLocation(artifactType, it.name)
+
+            when (val output = outputProvider(it)) {
+                is DirectoryProperty -> output.set(location)
+                is RegularFileProperty -> output.set(location)
+            }
+        }
     }
 
     fun <TaskT> transform(
@@ -92,21 +229,33 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactConsumer<ValueT>, TaskT: ArtifactProducer<ValueT> {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
-
-        val previousCurrent = info.currentArtifact
+        if (info.isInitialized) {
+            throw RuntimeException("Cannot add transform on $artifactType. produces() already called")
+        }
 
         val newTask = project.tasks.register(taskName, taskClass)
 
         // get provider for the newer version of the artifact
-        val newCurrent = newTask.flatMap { it.outputArtifact }
+        val previousCurrent = info.setNewOutput(newTask.flatMap { it.outputArtifact} )
 
-        // update final and current
-        info.finalArtifact.set(newCurrent)
-        info.currentArtifact = newCurrent
+        // if the artifact is an output, then wrap the location of the task output in a property
+        // that we keep track off. This way we can go back and set the final version to an output
+        // location
+        val outputLocationProperty: Property<ValueT>? =
+                if (artifactType.isOutput) {
+                    newIntermediateProperty(artifactType, taskName).also {
+                        info.finalArtifactLocation = it
+                    }
+                } else {
+                    null
+                }
+
 
         newTask.configure {
-            // set input value and register input with sensitivity
+            // set input value
             it.inputArtifact.set(previousCurrent)
+
+            // register the inputs on the task, including setting the sensitivity and normalizer
             val inputBuilder: TaskInputFilePropertyBuilder = when (val input = it.inputArtifact) {
                 is DirectoryProperty -> {
                     it.inputs.dir(input)
@@ -125,7 +274,11 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             }
 
             // set output location and register output
-            processOutput(it, newLocation())
+            if (outputLocationProperty != null) {
+                processOutput(it, outputLocationProperty)
+            } else {
+                processOutput(it, newIntermediateLocation(artifactType, taskName))
+            }
 
             // run the user's configuration action
             configAction.invoke(it)
@@ -134,5 +287,14 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
         return newTask
     }
 
-    protected abstract fun newLocation(): File
+    fun finalizeLocation(artifactType: ArtifactT) {
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+
+        if (info.isFinalLocationInitialized) {
+            when (val location = info.finalArtifactLocation) {
+                is DirectoryProperty -> location.set(newOutputLocation(artifactType))
+                is RegularFileProperty -> location.set(newOutputLocation(artifactType))
+            }
+        }
+    }
 }

@@ -17,7 +17,7 @@ class CustomPlugin: Plugin<Project> {
                     // Directory Transform
                     holder.transform(
                             SingleDirectoryArtifactType.MERGED_RESOURCES,
-                            "transformDir",
+                            "transformResources",
                             ExampleDirectoryTransformerTask::class.java) {
                         // some config here
                     }
@@ -25,8 +25,8 @@ class CustomPlugin: Plugin<Project> {
                     // ------
                     // File Transform
                     holder.transform(
-                            SingleFileArtifactType.MANIFEST,
-                            "transformFile",
+                            SingleFileArtifactType.MERGED_MANIFEST,
+                            "transformManifest",
                             ExampleFileTransformerTask::class.java) {
                         // some config here
                     }
@@ -35,8 +35,8 @@ class CustomPlugin: Plugin<Project> {
                     // Multi-File Appends & Transforms
                     // append
                     holder.append(
-                            MultiFileArtifactType.DEX,
-                            "appendFile1",
+                            MultiFileArtifactType.JAR,
+                            "generateCode1",
                             ExampleFileProducerTask::class.java
                     ) {
                         // some config here
@@ -44,22 +44,32 @@ class CustomPlugin: Plugin<Project> {
 
                     // transform
                     holder.transform(
-                            MultiFileArtifactType.DEX,
-                            "transformFileList",
+                            MultiFileArtifactType.JAR,
+                            "transformCode",
                             ExampleFileListTransformerTask::class.java) {
                         // some config here
                     }
 
                     // append again
                     holder.append(
-                            MultiFileArtifactType.DEX,
-                            "appendFile2",
+                            MultiFileArtifactType.JAR,
+                            "generateCode2",
                             ExampleFileProducerTask::class.java) {
                         // some config here
                     }
 
                     // ------
                     // Multi-Directory Appends & Transforms
+
+                    // ------
+                    // Package Transform
+                    holder.transform(
+                            SingleFileArtifactType.PACKAGE,
+                            "transformPackage",
+                            ExampleFileTransformerTask::class.java) {
+                        // some config here
+                    }
+
 
                 }
             }

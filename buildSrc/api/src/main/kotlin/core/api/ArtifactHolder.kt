@@ -28,7 +28,7 @@ interface ArtifactHolder {
      */
     fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> getArtifact(
             artifactType : SingleArtifactType<ValueT, ProviderT>
-    ) : Provider<ValueT>
+    ) : ProviderT
 
     /**
      * Returns an artifact as a [Provider] of iterable [RegularFile] or [Directory]
@@ -42,7 +42,7 @@ interface ArtifactHolder {
      */
     fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
             artifactType : MultiArtifactType<ValueT, ProviderT>
-    ) : Provider<out Iterable<ValueT>>
+    ) : ProviderT
 
     /**
      * Transforms an artifact.
