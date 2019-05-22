@@ -4,6 +4,7 @@ import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
+import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
@@ -21,7 +22,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
     private val singleFile = SingleFileHolder(project)
     private val multiFile = MultiFileHolder(project)
 
-    override fun <ValueT, ProviderT: Provider<ValueT>> getArtifact(
+    override fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> getArtifact(
             artifactType : SingleArtifactType<ValueT, ProviderT>
     ) : Provider<ValueT> = when (artifactType) {
         is SingleDirectoryArtifactType -> {
@@ -35,7 +36,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-    override fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
+    override fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
             artifactType : MultiArtifactType<ValueT, ProviderT>
     ) : Provider<out Iterable<ValueT>> = when (artifactType) {
         is MultiFileArtifactType -> {
@@ -49,7 +50,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-    internal fun <ValueT, ProviderT: Provider<ValueT>> produces(
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> produces(
             artifactType : SingleArtifactType<ValueT, ProviderT>,
             artifact: Provider<ValueT>
     ) {
@@ -66,7 +67,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-    internal fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> produces(
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> produces(
             artifactType : MultiArtifactType<ValueT, ProviderT>,
             artifact: Provider<ValueT>
     ) {

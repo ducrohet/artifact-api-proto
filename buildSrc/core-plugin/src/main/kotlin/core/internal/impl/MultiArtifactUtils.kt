@@ -8,6 +8,7 @@ import core.api.MultiFileArtifactType
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemLocation
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
@@ -52,7 +53,9 @@ class MultiArtifactInfo<ValueT>(
     }
 }
 
-abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, ProviderT>, ValueT, ProviderT : Provider<out Iterable<ValueT>>>(protected val project: Project) {
+abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, ProviderT>, ValueT: FileSystemLocation, ProviderT : Provider<out Iterable<ValueT>>>(
+        protected val project: Project
+) {
 
     protected abstract val map: MutableMap<ArtifactT, MultiArtifactInfo<ValueT>>
 

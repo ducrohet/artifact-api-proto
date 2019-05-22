@@ -4,10 +4,7 @@ package core.internal.impl
 import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFile
-import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.file.*
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskInputFilePropertyBuilder
@@ -65,7 +62,9 @@ class SingleArtifactInfo<ValueT>(
     }
 }
 
-abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, ProviderT>, ValueT, ProviderT : Provider<ValueT>>(protected val project: Project) {
+abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, ProviderT>, ValueT: FileSystemLocation, ProviderT : Provider<ValueT>>(
+        protected val project: Project
+) {
 
     protected abstract val map: MutableMap<ArtifactT, SingleArtifactInfo<ValueT>>
 

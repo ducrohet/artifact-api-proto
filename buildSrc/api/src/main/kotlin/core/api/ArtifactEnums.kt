@@ -20,7 +20,7 @@ interface InputInfoProvider {
 }
 
 /**
- * Base for artifact only handling a single file or directory
+ * Base for artifacts only handling a single file or directory
  */
 interface SingleArtifactType<ValueT, ProviderT: Provider<ValueT>> : InputInfoProvider
 

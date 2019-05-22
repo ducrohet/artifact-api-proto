@@ -3,10 +3,7 @@
 package core.api
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.Directory
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFile
-import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.file.*
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -23,12 +20,13 @@ interface ArtifactHolder {
      * Returns an artifact as a [Provider] of [RegularFile] or [Directory]
      * This is compatible with [RegularFileProperty] and [DirectoryProperty]
      *
-     * This is always the final version of this artifact. This is to be used for task wanting to consume an artifact.
+     * This is always the final version of this artifact. This is to be used for tasks wanting to read only an artifact,
+     * not transform it.
      *
      * @param artifactType the type of the artifact
      * @return the artifact as a provider containing both value and task dependency information
      */
-    fun <ValueT, ProviderT: Provider<ValueT>> getArtifact(
+    fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> getArtifact(
             artifactType : SingleArtifactType<ValueT, ProviderT>
     ) : Provider<ValueT>
 
@@ -36,12 +34,13 @@ interface ArtifactHolder {
      * Returns an artifact as a [Provider] of iterable [RegularFile] or [Directory]
      * This is compatible with [ListProperty]
      *
-     * This is always the final version of this artifact. This is to be used for task wanting to consume an artifact.
+     * This is always the final version of this artifact. This is to be used for tasks wanting to read only an artifact,
+     * not transform it.
      *
      * @param artifactType the type of the artifact
      * @return the artifact as a provider containing both value and task dependency information
      */
-    fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
+    fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
             artifactType : MultiArtifactType<ValueT, ProviderT>
     ) : Provider<out Iterable<ValueT>>
 
@@ -177,17 +176,17 @@ interface FileListConsumerTask : ArtifactListConsumer<RegularFile> {
 // -------
 // Parent interfaces
 
-interface ArtifactProducer<ValueT> {
+interface ArtifactProducer<ValueT: FileSystemLocation> {
     @get:Internal
     val outputArtifact: Property<ValueT>
 }
 
-interface ArtifactConsumer<ValueT> {
+interface ArtifactConsumer<ValueT: FileSystemLocation> {
     @get:Internal
     val inputArtifact: Property<ValueT>
 }
 
-interface ArtifactListConsumer<ValueT> {
+interface ArtifactListConsumer<ValueT: FileSystemLocation> {
     @get:Internal
     val inputArtifacts: ListProperty<ValueT>
 }
