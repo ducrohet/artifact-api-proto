@@ -1,6 +1,6 @@
 @file:Suppress("UNCHECKED_CAST", "UnstableApiUsage")
 
-package custom.plugin.api
+package core.api
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.Directory
@@ -44,28 +44,6 @@ interface ArtifactHolder {
     fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> getArtifact(
             artifactType : MultiArtifactType<ValueT, ProviderT>
     ) : Provider<out Iterable<ValueT>>
-
-    /**
-     * INTERNAL ONLY
-     *
-     * This sets the initial value of an artifact. This should not be a public API, but instead used by the internal
-     * task generating the original value.
-     */
-    fun <ValueT, ProviderT: Provider<ValueT>> produces(
-            artifactType : SingleArtifactType<ValueT, ProviderT>,
-            artifact: Provider<ValueT>
-    )
-
-    /**
-     * INTERNAL ONLY
-     *
-     * This sets the initial value of an artifact. This should not be a public API, but instead used by the internal
-     * task generating the original value.
-     */
-    fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> produces(
-            artifactType : MultiArtifactType<ValueT, ProviderT>,
-            artifact: Provider<ValueT>
-    )
 
     /**
      * Transforms an artifact.

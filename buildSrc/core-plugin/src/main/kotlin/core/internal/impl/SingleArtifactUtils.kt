@@ -1,7 +1,7 @@
 @file:Suppress("UnstableApiUsage")
-package custom.plugin.internal.api
+package core.internal.impl
 
-import custom.plugin.api.*
+import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.Directory

@@ -1,5 +1,5 @@
 @file:Suppress("UnstableApiUsage")
-package custom.plugin.api
+package core.api
 
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
@@ -28,7 +28,6 @@ interface SingleArtifactType<ValueT, ProviderT: Provider<ValueT>> : InputInfoPro
  * Base for artifacts being able to handle either a list of file or a list of directory.
  */
 interface MultiArtifactType<ValueT, ProviderT: Provider<out Iterable<ValueT>>> : InputInfoProvider
-
 
 /**
  * Actual enum classes.

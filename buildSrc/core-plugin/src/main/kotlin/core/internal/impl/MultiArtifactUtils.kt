@@ -1,7 +1,10 @@
 @file:Suppress("UNCHECKED_CAST", "UnstableApiUsage")
-package custom.plugin.internal.api
+package core.internal.impl
 
-import custom.plugin.api.*
+import core.api.ArtifactListConsumer
+import core.api.ArtifactProducer
+import core.api.MultiArtifactType
+import core.api.MultiFileArtifactType
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty

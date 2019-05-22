@@ -1,0 +1,29 @@
+plugins {
+    // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
+    id 'org.jetbrains.kotlin.jvm'
+    id 'java-gradle-plugin'
+}
+
+repositories {
+    // Use jcenter for resolving your dependencies.
+    // You can declare any Maven/Ivy/file repository here.
+    jcenter()
+	google()
+}
+
+gradlePlugin {
+    plugins {
+        create("core.internal.plugin") {
+            id = "core.internal.plugin"
+            implementationClass = "core.internal.CorePlugin"
+        }
+    }
+}
+
+dependencies {
+    implementation gradleApi()
+
+    // Use the Kotlin JDK 8 standard library.
+    api project(':api')
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+}

@@ -1,5 +1,8 @@
 /build
 /.gradle
 /buildSrc/build
+/buildSrc/api/build
+/buildSrc/core-plugin/build
+/buildSrc/third-party-plugin/build
 /buildSrc/.gradle
 /.idea

@@ -1,6 +1,6 @@
-package custom.plugin.internal.api
+package core.internal.impl
 
-import custom.plugin.api.*
+import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
@@ -49,7 +49,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-    override fun <ValueT, ProviderT: Provider<ValueT>> produces(
+    internal fun <ValueT, ProviderT: Provider<ValueT>> produces(
             artifactType : SingleArtifactType<ValueT, ProviderT>,
             artifact: Provider<ValueT>
     ) {
@@ -66,7 +66,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-    override fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> produces(
+    internal fun <ValueT, ProviderT: Provider<out Iterable<ValueT>>> produces(
             artifactType : MultiArtifactType<ValueT, ProviderT>,
             artifact: Provider<ValueT>
     ) {

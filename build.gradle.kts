@@ -1,5 +1,6 @@
 plugins {
-  id("custom.plugin")
+    id("third.party.plugin")
+    id("core.api")
 }
 
 tasks.register("clean") {
