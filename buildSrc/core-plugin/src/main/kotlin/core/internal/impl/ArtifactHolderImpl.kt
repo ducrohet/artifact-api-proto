@@ -79,7 +79,6 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
-
     internal fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> hasAppend(
             artifactType : MultiArtifactType<ValueT, ProviderT>
     ): Boolean = when (artifactType) {

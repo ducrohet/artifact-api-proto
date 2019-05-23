@@ -77,6 +77,7 @@ abstract class InternalMultiToSingleFileTransformerTask : DefaultTask() {
         for (file in inputArtifacts.get()) {
             println("\tInput${index++}: ${file.asFile}")
         }
+        println("\t---")
         println("\tOutput: ${outputArtifact.get().asFile}")
         outputArtifact.get().asFile.writeText("foo\n")
     }

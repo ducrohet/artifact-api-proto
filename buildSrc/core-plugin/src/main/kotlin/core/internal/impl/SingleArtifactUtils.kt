@@ -198,7 +198,7 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
         return info.hasTransforms
     }
-    
+
     fun <TaskT: DefaultTask> produces(
             artifactType: ArtifactT,
             taskProvider: TaskProvider<TaskT>,

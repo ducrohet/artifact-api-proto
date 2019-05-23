@@ -13,7 +13,7 @@ import org.gradle.api.tasks.TaskProvider
 /**
  * Base API for manipulating artifacts.
  *
- * Contains method to read, transform and append to artifacts.
+ * Contains methods to read, transform and append to artifacts.
  */
 interface ArtifactHolder {
     /**

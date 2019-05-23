@@ -25,7 +25,6 @@ interface InputInfoProvider {
  */
 interface SingleArtifactType<ValueT, ProviderT: Provider<ValueT>> : InputInfoProvider {
     val isOutput: Boolean
-
 }
 
 /**

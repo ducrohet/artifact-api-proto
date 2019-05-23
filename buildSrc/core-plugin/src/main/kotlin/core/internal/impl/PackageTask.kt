@@ -1,4 +1,4 @@
-package core.internal
+package core.internal.impl
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
@@ -29,14 +29,16 @@ abstract class PackageTask: DefaultTask() {
     fun action() {
         println(name)
         println("\tmanifest: ${manifest.get().asFile}")
+        var index = 1
         for (file in dexFiles.get()) {
-            println("\tdexFiles: ${file.asFile}")
+            println("\tdexFiles${index++}: ${file.asFile}")
         }
         println("\tmergedResources: ${mergedResources.get().asFile}")
+
         println("\t---")
+
         val outputFile = outputApk.get().asFile
         println("\tOutput: $outputFile")
-
         outputFile.parentFile.mkdirs()
         outputFile.writeText("foo")
     }
