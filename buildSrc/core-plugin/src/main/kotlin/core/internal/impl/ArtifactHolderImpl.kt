@@ -51,6 +51,50 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> hasTransforms(
+            artifactType : SingleArtifactType<ValueT, ProviderT>
+    ) : Boolean = when (artifactType) {
+        is SingleDirectoryArtifactType -> {
+            singleDir.hasTransforms(artifactType)
+        }
+        is SingleFileArtifactType -> {
+            singleFile.hasTransforms(artifactType)
+        }
+        else -> {
+            throw RuntimeException("unsupported SingleArtifactType")
+        }
+    }
+
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> hasTransforms(
+            artifactType : MultiArtifactType<ValueT, ProviderT>
+    ): Boolean = when (artifactType) {
+        is MultiFileArtifactType -> {
+            multiFile.hasTransforms(artifactType)
+        }
+        is MultiDirectoryArtifactType -> {
+            TODO("")
+        }
+        else -> {
+            throw RuntimeException("unsupported MultiArtifactType")
+        }
+    }
+
+
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> hasAppend(
+            artifactType : MultiArtifactType<ValueT, ProviderT>
+    ): Boolean = when (artifactType) {
+        is MultiFileArtifactType -> {
+            multiFile.hasAppend(artifactType)
+        }
+        is MultiDirectoryArtifactType -> {
+            TODO("")
+        }
+        else -> {
+            throw RuntimeException("unsupported MultiArtifactType")
+        }
+    }
+
+
     /**
      * Register the original producer of the given artifact.
      *

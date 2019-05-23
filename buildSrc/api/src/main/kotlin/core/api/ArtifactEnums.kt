@@ -4,6 +4,7 @@ package core.api
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.FileNormalizer
 import org.gradle.api.tasks.PathSensitivity
 
@@ -15,7 +16,7 @@ import org.gradle.api.tasks.PathSensitivity
  *
  */
 interface InputInfoProvider {
-    val sensitivity: PathSensitivity
+    val sensitivity: PathSensitivity?
     val normalizer: Class<out FileNormalizer>?
 }
 
@@ -41,32 +42,33 @@ interface MultiArtifactType<ValueT, ProviderT: Provider<out Iterable<ValueT>>> :
  */
 
 enum class SingleFileArtifactType(
-        override val sensitivity: PathSensitivity,
+        override val sensitivity: PathSensitivity? = null,
         override val normalizer: Class<out FileNormalizer>? = null,
         override val isOutput: Boolean = false
 ): SingleArtifactType<RegularFile, Provider<RegularFile>> {
-    MERGED_MANIFEST(PathSensitivity.NAME_ONLY),
-    PACKAGE(PathSensitivity.NONE, isOutput = true)
+    MERGED_MANIFEST(sensitivity = PathSensitivity.NAME_ONLY),
+    MERGED_DEX(sensitivity = PathSensitivity.NAME_ONLY),
+    PACKAGE(sensitivity = PathSensitivity.NONE, isOutput = true)
 }
 
 enum class SingleDirectoryArtifactType(
-        override val sensitivity: PathSensitivity,
+        override val sensitivity: PathSensitivity? = null,
         override val normalizer: Class<out FileNormalizer>? = null,
         override val isOutput: Boolean = false
 ): SingleArtifactType<Directory, Provider<Directory>> {
-    MERGED_RESOURCES(PathSensitivity.NONE);
+    MERGED_RESOURCES(sensitivity= PathSensitivity.NONE);
 }
 
 enum class MultiFileArtifactType(
-        override val sensitivity: PathSensitivity,
+        override val sensitivity: PathSensitivity? = null,
         override val normalizer: Class<out FileNormalizer>? = null
 ): MultiArtifactType<RegularFile, Provider<out Iterable<RegularFile>>> {
-    JAR(PathSensitivity.NONE),
-    DEX(PathSensitivity.NONE);
+    JAR(normalizer = ClasspathNormalizer::class.java),
+    DEX(sensitivity = PathSensitivity.NONE);
 }
 
 enum class MultiDirectoryArtifactType(
-        override val sensitivity: PathSensitivity,
+        override val sensitivity: PathSensitivity? = null,
         override val normalizer: Class<out FileNormalizer>? = null
 ): MultiArtifactType<Directory, Provider<Iterable<Directory>>> {
 }

@@ -145,8 +145,6 @@ interface ArtifactHolder {
             taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit
     ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: FileProducerTask
-
-
 }
 
 

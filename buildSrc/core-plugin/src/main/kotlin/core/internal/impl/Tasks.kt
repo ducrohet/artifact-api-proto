@@ -62,7 +62,7 @@ abstract class InternalFileProducerTask : DefaultTask() {
 }
 
 
-abstract class InternalFileTransformerTask : DefaultTask() {
+abstract class InternalMultiToSingleFileTransformerTask : DefaultTask() {
 
     @get:InputFiles
     abstract val inputArtifacts: ListProperty<RegularFile>
@@ -73,8 +73,9 @@ abstract class InternalFileTransformerTask : DefaultTask() {
     @TaskAction
     fun action() {
         println(name)
+        var index = 1
         for (file in inputArtifacts.get()) {
-            println("\tInput: ${file.asFile}")
+            println("\tInput${index++}: ${file.asFile}")
         }
         println("\tOutput: ${outputArtifact.get().asFile}")
         outputArtifact.get().asFile.writeText("foo\n")
@@ -90,8 +91,9 @@ abstract class InternalFileListConsumerTask : DefaultTask() {
     @TaskAction
     fun action() {
         println(name)
+        var index = 1
         for (file in inputArtifacts.get()) {
-            println("\tInput: ${file.asFile}")
+            println("\tInput${index++}: ${file.asFile}")
         }
     }
 }

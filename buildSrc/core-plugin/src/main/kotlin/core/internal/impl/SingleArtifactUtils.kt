@@ -194,6 +194,11 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
     fun getArtifact(artifactType : ArtifactT) : Provider<ValueT> =
             map[artifactType]?.finalArtifact ?: throw RuntimeException("Did not find artifact for $artifactType")
 
+    fun hasTransforms(artifactType : ArtifactT) : Boolean {
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+        return info.hasTransforms
+    }
+    
     fun <TaskT: DefaultTask> produces(
             artifactType: ArtifactT,
             taskProvider: TaskProvider<TaskT>,
@@ -268,9 +273,13 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
                 }
             }
 
-            inputBuilder.withPropertyName("inputArtifact").withPathSensitivity(artifactType.sensitivity)
-            artifactType.normalizer?.let { normalizer ->
-                inputBuilder.withNormalizer(normalizer)
+            inputBuilder.withPropertyName("inputArtifact")
+            if (artifactType.sensitivity != null) {
+                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+                inputBuilder.withPathSensitivity(artifactType.sensitivity)
+            } else if (artifactType.normalizer != null) {
+                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+                inputBuilder.withNormalizer(artifactType.normalizer)
             }
 
             // set output location and register output

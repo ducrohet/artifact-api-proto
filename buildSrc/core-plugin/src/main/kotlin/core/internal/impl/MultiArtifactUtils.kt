@@ -13,7 +13,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import java.io.File
-import java.nio.file.FileSystem
 import java.util.*
 
 class MultiFileHolder(
@@ -23,13 +22,7 @@ class MultiFileHolder(
     override val map = EnumMap<MultiFileArtifactType, MultiArtifactInfo<RegularFile>>(MultiFileArtifactType::class.java)
 
     override fun newListProperty(): ListProperty<RegularFile> = project.objects.listProperty(RegularFile::class.java)
-
-    override fun newOutputLocation(artifactType: MultiFileArtifactType, taskName: String): Property<RegularFile> =
-            project.objects.fileProperty().also {
-                it.set(newLocation(artifactType, taskName))
-            }
-
-    override fun newLocation(artifactType: MultiFileArtifactType, taskName: String): File =
+    override fun newIntermediateLocation(artifactType: MultiFileArtifactType, taskName: String): File =
             File(project.buildDir, "intermediates/$taskName/$artifactType.txt")
 
     init {
@@ -39,20 +32,51 @@ class MultiFileHolder(
     }
 }
 
+/**
+ * class that holds the info for a given artifact.
+ *
+ * It contains references to the current last version of the artifact, a dynamic final artifact property, etc..
+ */
 class MultiArtifactInfo<ValueT: FileSystemLocation>(
-        val finalArtifact: ListProperty<ValueT>,
-        currentArtifactProperty: ListProperty<ValueT>,
-        private val firstArtifact: ListProperty<ValueT>
+        propertyProvider: () -> ListProperty<ValueT>
 ) {
-    var currentArtifact: Provider<out Iterable<ValueT>>
+    val finalArtifact: ListProperty<ValueT> = propertyProvider()
 
-    lateinit var finalArtifactLocation: Provider<ValueT>
+    private var currentArtifact: Provider<out Iterable<ValueT>>
 
-    fun append(artifact: Provider<ValueT>) {
+    var hasAppend: Boolean = false
+        private set
+    var hasTransforms: Boolean = false
+        private set
+
+    private val firstArtifact: ListProperty<ValueT> = propertyProvider()
+
+    fun setFirstProvider(artifact: Provider<ValueT>) {
         firstArtifact.add(artifact)
     }
 
+    fun append(artifact: Provider<ValueT>) {
+        firstArtifact.add(artifact)
+        hasAppend = true
+    }
+
+    /**
+     * Sets a new output and return the old one
+     */
+    fun setNewOutput(artifact: Provider<out Iterable<ValueT>>): Provider<out Iterable<ValueT>> {
+        hasTransforms = true
+
+        val oldCurrent = currentArtifact
+
+        // update final and current
+        finalArtifact.set(artifact)
+        currentArtifact = artifact
+
+        return oldCurrent
+    }
+
     init {
+        val currentArtifactProperty = propertyProvider()
         currentArtifactProperty.set(firstArtifact)
         currentArtifact = currentArtifactProperty
         finalArtifact.set(currentArtifact)
@@ -66,15 +90,26 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
     protected abstract val map: MutableMap<ArtifactT, MultiArtifactInfo<ValueT>>
 
     protected abstract fun newListProperty(): ListProperty<ValueT>
-    protected abstract fun newOutputLocation(artifactType: ArtifactT, taskName: String): Property<ValueT>
-    protected abstract fun newLocation(artifactType: ArtifactT, taskName: String): File
+    protected abstract fun newIntermediateLocation(artifactType: ArtifactT, taskName: String): File
 
     protected fun init(artifactType: ArtifactT) {
-        map[artifactType] = MultiArtifactInfo(newListProperty(), newListProperty(), newListProperty())
+        map[artifactType] = MultiArtifactInfo(::newListProperty)
     }
 
     fun getArtifact(artifactType : ArtifactT) : Provider<out Iterable<ValueT>> =
             map[artifactType]?.finalArtifact ?: throw RuntimeException("Did not find artifact for $artifactType")
+
+    fun hasAppend(artifactType: ArtifactT): Boolean {
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+
+        return info.hasAppend
+    }
+
+    fun hasTransforms(artifactType: ArtifactT): Boolean {
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+
+        return info.hasTransforms
+    }
 
     fun <TaskT: DefaultTask> produces(
             artifactType: ArtifactT,
@@ -83,12 +118,12 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
     ) {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
 
-        info.append(taskProvider.flatMap { outputProvider(it) })
+        info.setFirstProvider(taskProvider.flatMap { outputProvider(it) })
 
         taskProvider.configure {
             when (val output = outputProvider(it)) {
-                is DirectoryProperty -> output.set(newLocation(artifactType, it.name))
-                is RegularFileProperty -> output.set(newLocation(artifactType, it.name))
+                is DirectoryProperty -> output.set(newIntermediateLocation(artifactType, it.name))
+                is RegularFileProperty -> output.set(newIntermediateLocation(artifactType, it.name))
             }
         }
     }
@@ -101,19 +136,11 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
     ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactListConsumer<ValueT>, TaskT: ArtifactProducer<ValueT> {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
 
-        val previousCurrent = info.currentArtifact
-
         val newTask = project.tasks.register(taskName, taskClass)
 
         // create a new property?
-        val newCurrent = newListProperty().also { w -> w.add(newTask.flatMap { it.outputArtifact })}
-
-        // update finalArtifact and currentArtifact
-        info.finalArtifact.set(newCurrent)
-        info.currentArtifact = newCurrent
-
-        val locationAsProperty = newOutputLocation(artifactType, taskName)
-        info.finalArtifactLocation = locationAsProperty
+        val previousCurrent = info.setNewOutput(
+                newListProperty().also { w -> w.add(newTask.flatMap { it.outputArtifact })})
 
         newTask.configure {
             // set input and register input with sensitivity
@@ -121,13 +148,16 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
             val inputBuilder = it.inputs
                     .files(it.inputArtifacts)
                     .withPropertyName("inputArtifacts")
-                    .withPathSensitivity(artifactType.sensitivity)
-            artifactType.normalizer?.let { normalizer ->
-                inputBuilder.withNormalizer(normalizer)
+            if (artifactType.sensitivity != null) {
+                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+                inputBuilder.withPathSensitivity(artifactType.sensitivity)
+            } else if (artifactType.normalizer != null) {
+                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+                inputBuilder.withNormalizer(artifactType.normalizer)
             }
 
             // set output location and register output
-            processOutput(it, locationAsProperty)
+            processOutput(it, newIntermediateLocation(artifactType, it.name))
 
             // run the user's configuration action
             configAction.invoke(it)
@@ -151,45 +181,11 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
 
         newTask.configure {
             // set output location and register output
-            processOutput(it, newLocation(artifactType, it.name))
+            processOutput(it, newIntermediateLocation(artifactType, it.name))
             // run the user's configuration action
             configAction.invoke(it)
         }
 
         return newTask
     }
-}
-
-
-internal fun <TaskT, ValueT> processOutput(task: TaskT, location: File? = null) where TaskT : DefaultTask, TaskT : ArtifactProducer<ValueT> {
-    // set output location
-    if (location != null) {
-        when (val output = task.outputArtifact) {
-            is DirectoryProperty -> output.set(location)
-            is RegularFileProperty -> output.set(location)
-            else -> throw RuntimeException("Unexpected output type: ${output.javaClass}")
-        }
-    }
-
-    registerOutput(task)
-}
-
-private fun <TaskT, ValueT> registerOutput(task: TaskT) where TaskT : DefaultTask, TaskT : ArtifactProducer<ValueT> {
-    // register output
-    val outputBuilder = when (val output = task.outputArtifact) {
-        is DirectoryProperty -> task.outputs.dir(output)
-        is RegularFileProperty -> task.outputs.file(output)
-        else -> throw RuntimeException("Unexpected output type: ${output.javaClass}")
-    }
-    outputBuilder.withPropertyName("outputArtifact")
-}
-
-
-internal fun <TaskT, ValueT> processOutput(task: TaskT, location: Provider<ValueT>? = null) where TaskT : DefaultTask, TaskT : ArtifactProducer<ValueT> {
-    // set output location
-    if (location != null) {
-        task.outputArtifact.set(location)
-    }
-
-    registerOutput(task)
 }

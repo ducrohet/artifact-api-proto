@@ -59,6 +59,15 @@ class CustomPlugin: Plugin<Project> {
                     }
 
                     // ------
+                    // append Dex
+                    holder.append(
+                            MultiFileArtifactType.DEX,
+                            "generateDex",
+                            ExampleFileProducerTask::class.java) {
+                        // some config here
+                    }
+
+                    // ------
                     // Multi-Directory Appends & Transforms
 
                     // ------

@@ -9,7 +9,7 @@ abstract class ExampleDirectoryTransformerTask: DefaultTask(), DirectoryProducer
 
     @TaskAction
     fun action() {
-        println(name)
+        println("$name(CustomPlugin)")
         println("\tInput: ${inputArtifact.get().asFile}")
         println("\tOutput: ${outputArtifact.get().asFile}")
     }
@@ -19,7 +19,7 @@ abstract class ExampleFileProducerTask : DefaultTask(), FileProducerTask {
 
     @TaskAction
     fun action() {
-        println(name)
+        println("$name(CustomPlugin)")
         println("\tOutput: ${outputArtifact.get().asFile}")
         outputArtifact.get().asFile.writeText("foo\n")
     }
@@ -29,7 +29,7 @@ abstract class ExampleFileTransformerTask: DefaultTask(), FileProducerTask, File
 
     @TaskAction
     fun action() {
-        println(name)
+        println("$name(CustomPlugin)")
         println("\tInput: ${inputArtifact.get().asFile}")
         println("\tOutput: ${outputArtifact.get().asFile}")
         outputArtifact.get().asFile.writeText(inputArtifact.get().asFile.readText() + "new content\n")
@@ -40,9 +40,10 @@ abstract class ExampleFileListTransformerTask: DefaultTask(), FileListConsumerTa
 
     @TaskAction
     fun action() {
-        println(name)
+        println("$name(CustomPlugin)")
+        var index = 1
         for (file in inputArtifacts.get()) {
-            println("\tInput: ${file.asFile}")
+            println("\tInput${index++}: ${file.asFile}")
         }
         println("\tOutput: ${outputArtifact.get().asFile}")
         outputArtifact.get().asFile.writeText("foo2\n")

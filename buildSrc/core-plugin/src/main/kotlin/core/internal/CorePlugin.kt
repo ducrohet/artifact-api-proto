@@ -8,6 +8,7 @@ import core.api.SingleFileArtifactType
 import core.internal.impl.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFile
 
 class CorePlugin: Plugin<Project> {
 
@@ -31,10 +32,30 @@ class CorePlugin: Plugin<Project> {
         createCompilerAndDexer(artifactHolder)
         createListDirectoryTasks(artifactHolder)
 
+        // check if we have more than one dex, if we do then we merge the dex instead.
+        var useDexMerger = false
+        if (artifactHolder.hasAppend(MultiFileArtifactType.DEX)) {
+
+            val dexMerger = project.tasks.register(
+                    "dexMerger",
+                    InternalMultiToSingleFileTransformerTask::class.java) {
+                it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
+            }
+
+            artifactHolder.produces(SingleFileArtifactType.MERGED_DEX, dexMerger, { it.outputArtifact })
+            useDexMerger = true
+        }
+
         val packageTask = project.tasks.register("packageApk", PackageTask::class.java) {
             it.manifest.set(artifactHolder.getArtifact(SingleFileArtifactType.MERGED_MANIFEST))
             it.mergedResources.set(artifactHolder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES))
-            it.dexFiles.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
+            if (useDexMerger) {
+                val wrapper = project.objects.listProperty(RegularFile::class.java)
+                wrapper.add(artifactHolder.getArtifact(SingleFileArtifactType.MERGED_DEX))
+                it.dexFiles.set(wrapper)
+            } else {
+                it.dexFiles.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
+            }
         }
 
         artifactHolder.produces(SingleFileArtifactType.PACKAGE, packageTask, { it.outputApk })
@@ -81,7 +102,7 @@ class CorePlugin: Plugin<Project> {
 
         val dexer = project.tasks.register(
                 "dexer",
-                InternalFileTransformerTask::class.java) {
+                InternalMultiToSingleFileTransformerTask::class.java) {
             it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.JAR))
         }
 
