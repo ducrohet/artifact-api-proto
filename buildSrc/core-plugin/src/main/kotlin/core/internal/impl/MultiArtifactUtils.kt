@@ -40,8 +40,17 @@ class MultiFileHolder(
 class MultiArtifactInfo<ValueT: FileSystemLocation>(
         propertyProvider: () -> ListProperty<ValueT>
 ) {
+    /**
+     * Final Artifact. Always the final value of the artifact. This is dynamic and is updated as new transforms
+     * are added.
+     */
     val finalArtifact: ListProperty<ValueT> = propertyProvider()
 
+    /**
+     * The current artifact version. Every new transform updates this to the output of the new transform
+     *
+     * @see [MultiArtifactInfo.setNewOutput]
+     */
     private var currentArtifact: Provider<out Iterable<ValueT>>
 
     var hasAppend: Boolean = false
@@ -49,12 +58,24 @@ class MultiArtifactInfo<ValueT: FileSystemLocation>(
     var hasTransforms: Boolean = false
         private set
 
+    /**
+     * Wrapper around the first provider. This is used to handle transforms while the task that produce the first
+     * version of the artifact has not yet been set.
+     *
+     * This also receives all the appended outputs.
+     */
     private val firstArtifact: ListProperty<ValueT> = propertyProvider()
 
+    /**
+     * Sets the value of the first artifact.
+     */
     fun setFirstProvider(artifact: Provider<ValueT>) {
         firstArtifact.add(artifact)
     }
 
+    /**
+     * Appends a new output to the artifact.
+     */
     fun append(artifact: Provider<ValueT>) {
         firstArtifact.add(artifact)
         hasAppend = true
@@ -138,7 +159,8 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
 
         val newTask = project.tasks.register(taskName, taskClass)
 
-        // create a new property?
+        // update the info with the new output and get the previous output. This will be used
+        // to configure the input of the task
         val previousCurrent = info.setNewOutput(
                 newListProperty().also { w -> w.add(newTask.flatMap { it.outputArtifact })})
 

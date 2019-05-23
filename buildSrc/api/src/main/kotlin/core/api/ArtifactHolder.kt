@@ -112,6 +112,8 @@ interface ArtifactHolder {
      * This registers the task of the given type and wires its output (based on [DirectoryProducerTask])
      * The output is a single Directory.
      *
+     * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
+     *
      * @param artifactType the type of the artifact to transform
      * @param taskName the name of the task to register
      * @param taskClass the type of the task to register.
@@ -131,6 +133,8 @@ interface ArtifactHolder {
      *
      * This registers the task of the given type and wires its output (based on [FileProducerTask])
      * The output is a single File.
+     *
+     * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
      *
      * @param artifactType the type of the artifact to transform
      * @param taskName the name of the task to register

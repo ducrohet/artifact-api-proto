@@ -20,8 +20,11 @@ class CorePlugin: Plugin<Project> {
 
         project.afterEvaluate {
             val artifactHolder = ArtifactHolderImpl(project)
+
+            // if present, run the lambda provided by API user(s).
             extension.block?.invoke(artifactHolder)
 
+            // then create our own tasks
             createTasks(artifactHolder)
         }
     }
@@ -33,6 +36,7 @@ class CorePlugin: Plugin<Project> {
         createListDirectoryTasks(artifactHolder)
 
         // check if we have more than one dex, if we do then we merge the dex instead.
+        // This is an example of being able to detect whether someone interacted with artifacts or not.
         var useDexMerger = false
         if (artifactHolder.hasAppend(MultiFileArtifactType.DEX)) {
 
@@ -95,8 +99,7 @@ class CorePlugin: Plugin<Project> {
         // create the original producer last
         val compiler = project.tasks.register(
                 "compileCode",
-                InternalFileProducerTask::class.java) {
-        }
+                InternalFileProducerTask::class.java) { }
 
         artifactHolder.produces(MultiFileArtifactType.JAR, compiler, { it.outputArtifact })
 

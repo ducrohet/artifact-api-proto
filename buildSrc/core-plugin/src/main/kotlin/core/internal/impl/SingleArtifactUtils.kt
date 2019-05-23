@@ -12,7 +12,9 @@ import org.gradle.api.tasks.TaskProvider
 import java.io.File
 import java.util.*
 
-class SingleDirectoryHolder(project: Project): SingleArtifactHolder<SingleDirectoryArtifactType, Directory, Provider<Directory>>(project) {
+class SingleDirectoryHolder(
+        project: Project
+): SingleArtifactHolder<SingleDirectoryArtifactType, Directory, Provider<Directory>>(project) {
 
     override val map = EnumMap<SingleDirectoryArtifactType, SingleArtifactInfo<Directory>>(SingleDirectoryArtifactType::class.java)
 
@@ -20,8 +22,8 @@ class SingleDirectoryHolder(project: Project): SingleArtifactHolder<SingleDirect
 
     override fun newIntermediateProperty(artifactType: SingleDirectoryArtifactType, taskName: String): DirectoryProperty =
             project.objects.directoryProperty().also {
-        it.set(newIntermediateLocation(artifactType, taskName))
-    }
+                it.set(newIntermediateLocation(artifactType, taskName))
+            }
 
     override fun newIntermediateLocation(artifactType: SingleDirectoryArtifactType, taskName: String) =
             File(project.buildDir, "intermediates/$taskName/$artifactType")
@@ -42,7 +44,9 @@ class SingleDirectoryHolder(project: Project): SingleArtifactHolder<SingleDirect
     }
 }
 
-class SingleFileHolder(project: Project): SingleArtifactHolder<SingleFileArtifactType, RegularFile, Provider<RegularFile>>(project) {
+class SingleFileHolder(
+        project: Project
+): SingleArtifactHolder<SingleFileArtifactType, RegularFile, Provider<RegularFile>>(project) {
 
     override val map = EnumMap<SingleFileArtifactType, SingleArtifactInfo<RegularFile>>(SingleFileArtifactType::class.java)
 
@@ -108,19 +112,20 @@ class SingleArtifactInfo<ValueT: FileSystemLocation>(
      *
      * @see [SingleArtifactInfo.setNewOutput]
      */
-    private var currentArtifact: Provider<ValueT>
+    private var currentArtifact: Provider<ValueT> = firstArtifact
 
     /**
-     * an optional final artifact location.
+     * an optional final artifact location. Use when the artifact type is an output (see [SingleArtifactType.isOutput])
      *
      * This is used as the source for currentArtifact.
      * Instead of doing <code>currentArtifact.set(File)</code> we do
      * <code>
-     *     currentArtifact.set(provider)
-     *     finalArtifactLocation = provider
+     *     finalArtifactLocation = project.objects.directoryProperty()
+     *     finalArtifactLocation.set(File)
+     *     currentArtifact.set(finalArtifactLocation)
      * </code>
      *
-     * Later, we'll go back and edit the location of the finalArtifactProvider which is the wrapper on
+     * Later, we'll go back and edit the location of finalArtifactProvider which is the wrapper on
      * the location of the last task transforming the artifact.
      */
     lateinit var finalArtifactLocation: Property<ValueT>
@@ -149,8 +154,6 @@ class SingleArtifactInfo<ValueT: FileSystemLocation>(
         hasTransforms = true
 
         val oldCurrent = currentArtifact
-
-        // update final and current
         finalArtifact.set(artifact)
         currentArtifact = artifact
 
@@ -158,7 +161,6 @@ class SingleArtifactInfo<ValueT: FileSystemLocation>(
     }
 
     init {
-        currentArtifact = firstArtifact
         finalArtifact.set(currentArtifact)
     }
 }
@@ -213,9 +215,9 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
         info.setFirstArtifact(taskProvider.flatMap { outputProvider(it) })
 
         taskProvider.configure {
-            // if the artifact is an output and there's no transform on it, then this output
-            // if the final output and should be in the output folder.
-            // otherwise, it needs to go in intermediate.
+            // if the artifact is an output and there's no transforms on it, then this output
+            // is the final output and should be in the output folder.
+            // otherwise, it needs to go in intermediates.
             val location: File = if (artifactType.isOutput && !info.hasTransforms)
                 newOutputLocation(artifactType)
             else
@@ -240,12 +242,13 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
 
         val newTask = project.tasks.register(taskName, taskClass)
 
-        // get provider for the newer version of the artifact
+        // update the info with the new output and get the previous output. This will be used
+        // to configure the input of the task
         val previousCurrent = info.setNewOutput(newTask.flatMap { it.outputArtifact} )
 
         // if the artifact is an output, then wrap the location of the task output in a property
-        // that we keep track off. This way we can go back and set the final version to an output
-        // location
+        // that we keep track off. This way we can go back and set the final version to the outputs
+        // folder.
         val outputLocationProperty: Property<ValueT>? =
                 if (artifactType.isOutput) {
                     newIntermediateProperty(artifactType, taskName).also {
