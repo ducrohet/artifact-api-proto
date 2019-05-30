@@ -49,6 +49,26 @@ interface ArtifactHolder {
     /**
      * Transforms an artifact.
      *
+     * This registers the task of the given type and wires its input and output (based on [FileConsumerTask] and
+     * [FileProducerTask])
+     *
+     * @param artifactType the type of the artifact to transform
+     * @param taskName the name of the task to register
+     * @param taskClass the type of the task to register.
+     * @param configAction a delayed config action to configure the task
+     * @return a [TaskProvider] for the newly created task
+     *
+     */
+    fun <TaskT> replace(
+            artifactType: SingleFileArtifactType,
+            taskName: String,
+            taskClass: Class<TaskT>,
+            configAction: (TaskT) -> Unit
+    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask
+
+    /**
+     * Transforms an artifact.
+     *
      * This registers the task of the given type and wires its input and output (based on [DirectoryConsumerTask] and
      * [DirectoryProducerTask])
      *

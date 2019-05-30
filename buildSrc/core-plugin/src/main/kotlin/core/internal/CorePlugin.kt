@@ -36,7 +36,11 @@ class CorePlugin: Plugin<Project> {
         // check if we have more than one dex, if we do then we merge the dex instead.
         // This is an example of being able to detect whether someone interacted with artifacts or not.
         var useDexMerger = false
-        if (artifactHolder.hasAppend(MultiFileArtifactType.DEX)) {
+        if (artifactHolder.hasProducer(SingleFileArtifactType.MERGED_DEX)) {
+            useDexMerger = true
+
+            // do nothing, since there's already a merged dex task
+        } else if (artifactHolder.hasAppend(MultiFileArtifactType.DEX)) {
 
             val dexMerger = project.tasks.register(
                     "dexMerger",
@@ -88,13 +92,15 @@ class CorePlugin: Plugin<Project> {
     }
 
     private fun createManifestMerger(artifactHolder: ArtifactHolderImpl) {
-        // create the original producer last
-        val task = project.tasks.register(
-                "manifestMerger",
-                InternalFileProducerTask::class.java
-        ) { }
+        if (artifactHolder.hasProducer(SingleFileArtifactType.MERGED_MANIFEST).not()) {
+            // create the original producer last
+            val task = project.tasks.register(
+                    "manifestMerger",
+                    InternalFileProducerTask::class.java
+            ) { }
 
-        artifactHolder.produces(SingleFileArtifactType.MERGED_MANIFEST, task, { it.outputArtifact })
+            artifactHolder.produces(SingleFileArtifactType.MERGED_MANIFEST, task, { it.outputArtifact })
+        }
     }
 
     private fun createListDirectoryTasks(holder: ArtifactHolderImpl) {

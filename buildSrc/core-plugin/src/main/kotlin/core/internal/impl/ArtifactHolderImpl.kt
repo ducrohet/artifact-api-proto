@@ -98,6 +98,20 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         }
     }
 
+    internal fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> hasProducer(
+            artifactType : SingleArtifactType<ValueT, ProviderT>
+    ) : Boolean = when (artifactType) {
+        is SingleDirectoryArtifactType -> {
+            singleDir.hasProducer(artifactType)
+        }
+        is SingleFileArtifactType -> {
+            singleFile.hasProducer(artifactType)
+        }
+        else -> {
+            throw RuntimeException("unsupported SingleArtifactType")
+        }
+    }
+
 
     /**
      * Register the original producer of the given artifact.
@@ -150,6 +164,14 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
                 throw RuntimeException("unsupported MultiArtifactType")
             }
         }
+    }
+
+    override fun <TaskT> replace(
+            artifactType: SingleFileArtifactType,
+            taskName: String,
+            taskClass: Class<TaskT>,
+            configAction: (TaskT) -> Unit): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask {
+        return singleFile.replace(artifactType, taskName, taskClass, configAction)
     }
 
     override fun <TaskT> transform(

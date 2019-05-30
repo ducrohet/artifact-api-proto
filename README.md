@@ -12,7 +12,9 @@ To see what happens, run the `assemble` task. This will run a bunch of tasks, ea
 
 You will notice a few android-like tasks (compileCode, dexer, manifest merger) that output in the `intermediates` folder, as well as a final packaging task that writes the output in the `outputs` folder.
 
-Running the same `assemble` task with `clean` and `-Pandroid.transform=true/false` will show what happens when the 3rd party plugin inserts new tasks in the mix, using the API.
+Running the same `assemble` task with `clean` and `-Ptransform.[resources|manifest|code|package|all]=true` will show what happens when the 3rd party plugin inserts new tasks in the mix, using the API.
+
+You can also use `-Preplace.dex=true` to see what happens when a task fully replace an existing task.
 
 Notice the transforms tasks injecting themselves between the original producer and consumer tasks.
 Notice how the original packaging task now outputs in the `intermediates` folder since another task transforms its output and generates the final package (in the `outputs` folder.)

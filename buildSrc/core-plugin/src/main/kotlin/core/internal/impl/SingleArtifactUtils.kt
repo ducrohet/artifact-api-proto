@@ -206,6 +206,11 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
     fun getArtifact(artifactType : ArtifactT) : Provider<out ValueT> =
             map[artifactType]?.finalArtifact ?: throw RuntimeException("Did not find artifact for $artifactType")
 
+    fun hasProducer(artifactType: ArtifactT): Boolean {
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+        return info.isInitialized
+    }
+
     fun hasTransforms(artifactType : ArtifactT) : Boolean {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
         return info.hasTransforms
@@ -225,6 +230,7 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
         info.setFirstArtifact(taskProvider.flatMap { outputProvider(it) })
 
         taskProvider.configure {
+            // IMPORTANT This works because this is an internal API called after all transforms!
             // if the artifact is an output and there's no transforms on it, then this output
             // is the final output and should be in the output folder.
             // otherwise, it needs to go in intermediates.
@@ -238,6 +244,42 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
                 is RegularFileProperty -> output.set(location)
             }
         }
+    }
+
+    fun <TaskT> replace(
+            artifactType : ArtifactT,
+            taskName: String,
+            taskClass: Class<TaskT>,
+            configAction: (TaskT) -> Unit) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<ValueT> {
+        val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
+        if (info.isInitialized) {
+            throw RuntimeException("Artifact $artifactType already initialized")
+        }
+
+        val newTask = project.tasks.register(taskName, taskClass)
+
+        // set the first artifact wrapper to the actual output.
+        info.setFirstArtifact(newTask.flatMap { it.outputArtifact })
+
+        newTask.configure {
+            // if the artifact is an output and there's no transforms on it, then this output
+            // is the final output and should be in the output folder.
+            // otherwise, it needs to go in intermediates.
+            // FIXME this needs to be done *after* all the transforms! Since this can now be called in the middle of the transform this needs to be updated
+            val location: File = if (artifactType.isOutput && !info.hasTransforms)
+                newOutputLocation(artifactType)
+            else
+                newIntermediateLocation(artifactType, it.name)
+
+            when (val output = it.outputArtifact) {
+                is DirectoryProperty -> output.set(location)
+                is RegularFileProperty -> output.set(location)
+            }
+
+            configAction(it)
+        }
+
+        return newTask
     }
 
     fun <TaskT> transform(
@@ -303,7 +345,7 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             }
 
             // run the user's configuration action
-            configAction.invoke(it)
+            configAction(it)
         }
 
         return newTask
