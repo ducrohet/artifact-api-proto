@@ -48,7 +48,10 @@ class CorePlugin: Plugin<Project> {
                 it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
             }
 
-            artifactHolder.produces(SingleFileArtifactType.MERGED_DEX, dexMerger, { it.outputArtifact })
+            artifactHolder.produces(
+                    SingleFileArtifactType.MERGED_DEX,
+                    dexMerger,
+                    InternalMultiToSingleFileTransformerTask::outputArtifact)
             useDexMerger = true
         }
 
@@ -66,7 +69,7 @@ class CorePlugin: Plugin<Project> {
                 }
             }
 
-            artifactHolder.produces(SingleFileArtifactType.PACKAGE, packageTask, { it.outputApk })
+            artifactHolder.produces(SingleFileArtifactType.PACKAGE, packageTask, PackageTask::outputApk)
         }
 
         project.tasks.register("assemble") {
@@ -82,7 +85,7 @@ class CorePlugin: Plugin<Project> {
                 "resources",
                 InternalDirectoryProducerTask::class.java) { }
 
-        artifactHolder.produces(MultiDirectoryArtifactType.RESOURCES, task, { it.outputArtifact })
+        artifactHolder.produces(MultiDirectoryArtifactType.RESOURCES, task, InternalDirectoryProducerTask::outputArtifact)
 
         val merger = project.tasks.register(
                 "resourceMerger",
@@ -90,7 +93,10 @@ class CorePlugin: Plugin<Project> {
             it.inputArtifacts.set(artifactHolder.getArtifact(MultiDirectoryArtifactType.RESOURCES))
         }
 
-        artifactHolder.produces(SingleDirectoryArtifactType.MERGED_RESOURCES, merger, { it.outputArtifact })
+        artifactHolder.produces(
+                SingleDirectoryArtifactType.MERGED_RESOURCES,
+                merger,
+                InternalMultiToSingleDirectoryTransformerTask::outputArtifact)
     }
 
     private fun createManifestMerger(artifactHolder: ArtifactHolderImpl) {
@@ -101,7 +107,10 @@ class CorePlugin: Plugin<Project> {
                     InternalFileProducerTask::class.java
             ) { }
 
-            artifactHolder.produces(SingleFileArtifactType.MERGED_MANIFEST, task, { it.outputArtifact })
+            artifactHolder.produces(
+                    SingleFileArtifactType.MERGED_MANIFEST,
+                    task,
+                    InternalFileProducerTask::outputArtifact)
         }
     }
 
@@ -115,7 +124,7 @@ class CorePlugin: Plugin<Project> {
                 "compileCode",
                 InternalFileProducerTask::class.java) { }
 
-        artifactHolder.produces(MultiMixedArtifactType.BYTECODE, compiler, { it.outputArtifact })
+        artifactHolder.produces(MultiMixedArtifactType.BYTECODE, compiler, InternalFileProducerTask::outputArtifact)
 
         val dexer = project.tasks.register(
                 "dexer",
@@ -123,6 +132,9 @@ class CorePlugin: Plugin<Project> {
             it.inputArtifacts.set(artifactHolder.getArtifact(MultiMixedArtifactType.BYTECODE))
         }
 
-        artifactHolder.produces(MultiFileArtifactType.DEX, dexer, { it.outputArtifact })
+        artifactHolder.produces(
+                MultiFileArtifactType.DEX,
+                dexer,
+                InternalMixedToSingleFileTransformerTask::outputArtifact)
     }
 }

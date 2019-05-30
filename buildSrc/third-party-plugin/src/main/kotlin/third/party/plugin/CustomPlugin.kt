@@ -124,9 +124,8 @@ class CustomPlugin: Plugin<Project> {
                     SingleFileArtifactType.MERGED_DEX,
                     "newDexer",
                     ExampleDexerTask::class.java
-            ).input(MultiMixedArtifactType.BYTECODE) {
-                it.inputArtifacts
-            }.finish {
+            ).input(MultiMixedArtifactType.BYTECODE, ExampleDexerTask::inputArtifacts
+            ).finish {
                 // some config
             }
         }
@@ -138,13 +137,10 @@ class CustomPlugin: Plugin<Project> {
                     SingleFileArtifactType.PACKAGE,
                     "newPackager",
                     NewPackageTask::class.java
-            ).input(SingleFileArtifactType.MERGED_MANIFEST) {
-                it.manifest
-            }.input(MultiMixedArtifactType.BYTECODE) {
-                it.bytecodeFiles
-            }.input(SingleDirectoryArtifactType.MERGED_RESOURCES) {
-                it.mergedResources
-            }.finish {
+            ).input(SingleFileArtifactType.MERGED_MANIFEST, NewPackageTask::manifest
+            ).input(MultiMixedArtifactType.BYTECODE, NewPackageTask::bytecodeFiles
+            ).input(SingleDirectoryArtifactType.MERGED_RESOURCES, NewPackageTask::mergedResources
+            ).finish {
                 // some config
             }
         }
