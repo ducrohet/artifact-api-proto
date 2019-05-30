@@ -8,6 +8,8 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskProvider
 
 /**
@@ -107,6 +109,28 @@ interface ArtifactHolder {
     ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: FileListConsumerTask, TaskT: FileProducerTask
 
     /**
+     * Transforms an artifact.
+     *
+     * This registers the task of the given type and wires its input and output (based on [FileListConsumerTask] and
+     * [FileProducerTask])
+     *
+     * The task must be able to consume more that one file and merge all the output in a single file.
+     *
+     * @param artifactType the type of the artifact to transform
+     * @param taskName the name of the task to register
+     * @param taskClass the type of the task to register.
+     * @param configAction a delayed config action to configure the task
+     * @return a [TaskProvider] for the newly created task
+     *
+     */
+    fun <TaskT> transform(
+            artifactType : MultiDirectoryArtifactType,
+            taskName: String,
+            taskClass: Class<TaskT>,
+            configAction: (TaskT) -> Unit
+    ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: DirectoryListConsumerTask, TaskT: DirectoryProducerTask
+
+    /**
      * Appends a task-generated Directory to an artifact.
      *
      * This registers the task of the given type and wires its output (based on [DirectoryProducerTask])
@@ -149,6 +173,28 @@ interface ArtifactHolder {
             taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit
     ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: FileProducerTask
+
+    /**
+     * Appends a task-generated or folder to a mixed artifact.
+     *
+     * This registers the task of the given type and wires its output (based on [ArtifactProducer])
+     * The output is a single File.
+     *
+     * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
+     *
+     * @param artifactType the type of the artifact to transform
+     * @param taskName the name of the task to register
+     * @param taskClass the type of the task to register.
+     * @param configAction a delayed config action to configure the task
+     * @return a [TaskProvider] for the newly created task
+     *
+     */
+    fun <TaskT> append(
+            artifactType : MultiMixedArtifactType,
+            taskName: String,
+            taskClass: Class<TaskT>,
+            configAction: (TaskT) -> Unit
+    ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<out FileSystemLocation>
 }
 
 
@@ -156,6 +202,7 @@ interface ArtifactHolder {
 // Base interfaces for input and output of tasks created with append/transform
 
 interface DirectoryProducerTask: ArtifactProducer<Directory> {
+    @get:OutputDirectory
     override val outputArtifact: DirectoryProperty
 }
 
@@ -164,6 +211,7 @@ interface DirectoryConsumerTask: ArtifactConsumer<Directory> {
 }
 
 interface FileProducerTask: ArtifactProducer<RegularFile> {
+    @get:OutputFile
     override val outputArtifact: RegularFileProperty
 }
 
@@ -173,6 +221,10 @@ interface FileConsumerTask: ArtifactConsumer<RegularFile> {
 
 interface FileListConsumerTask : ArtifactListConsumer<RegularFile> {
     override val inputArtifacts: ListProperty<RegularFile>
+}
+
+interface DirectoryListConsumerTask : ArtifactListConsumer<Directory> {
+    override val inputArtifacts: ListProperty<Directory>
 }
 
 // -------

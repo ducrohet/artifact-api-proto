@@ -14,10 +14,29 @@ class CustomPlugin: Plugin<Project> {
                 if (project.properties["android.transform"] == "true") {
 
                     // ------
-                    // Directory Transform
+                    // Single and multi Folder append/transform
+                    holder.append(
+                            MultiDirectoryArtifactType.RESOURCES,
+                            "generateResources",
+                            ExampleDirectoryProducerTask::class.java) {
+                        // some config here
+                    }
+                    holder.transform(
+                            MultiDirectoryArtifactType.RESOURCES,
+                            "transformResources",
+                            ExampleDirListTransformerTask::class.java) {
+                        // some config here
+                    }
+                    holder.append(
+                            MultiDirectoryArtifactType.RESOURCES,
+                            "generateMoreResources",
+                            ExampleDirectoryProducerTask::class.java) {
+                        // some config here
+                    }
+
                     holder.transform(
                             SingleDirectoryArtifactType.MERGED_RESOURCES,
-                            "transformResources",
+                            "transformMergedResources",
                             ExampleDirectoryTransformerTask::class.java) {
                         // some config here
                     }
@@ -32,34 +51,27 @@ class CustomPlugin: Plugin<Project> {
                     }
 
                     // ------
-                    // Multi-File Appends & Transforms
-                    // append
+                    // Mixed Appends
+
+                    // append file
                     holder.append(
-                            MultiFileArtifactType.JAR,
+                            MultiMixedArtifactType.BYTECODE,
                             "generateCode1",
                             ExampleFileProducerTask::class.java
                     ) {
                         // some config here
                     }
 
-                    // transform
-                    holder.transform(
-                            MultiFileArtifactType.JAR,
-                            "transformCode",
-                            ExampleFileListTransformerTask::class.java) {
-                        // some config here
-                    }
-
-                    // append again
+                    // append directory
                     holder.append(
-                            MultiFileArtifactType.JAR,
+                            MultiMixedArtifactType.BYTECODE,
                             "generateCode2",
-                            ExampleFileProducerTask::class.java) {
+                            ExampleDirectoryProducerTask::class.java) {
                         // some config here
                     }
 
                     // ------
-                    // append Dex
+                    // Multi File append
                     holder.append(
                             MultiFileArtifactType.DEX,
                             "generateDex",
@@ -71,7 +83,7 @@ class CustomPlugin: Plugin<Project> {
                     // Multi-Directory Appends & Transforms
 
                     // ------
-                    // Package Transform
+                    // Output Transform
                     holder.transform(
                             SingleFileArtifactType.PACKAGE,
                             "transformPackage",

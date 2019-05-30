@@ -4,10 +4,7 @@ package core.internal.impl
 import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.FileSystemLocation
-import org.gradle.api.file.RegularFile
-import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.file.*
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -22,11 +19,57 @@ class MultiFileHolder(
     override val map = EnumMap<MultiFileArtifactType, MultiArtifactInfo<RegularFile>>(MultiFileArtifactType::class.java)
 
     override fun newListProperty(): ListProperty<RegularFile> = project.objects.listProperty(RegularFile::class.java)
-    override fun newIntermediateLocation(artifactType: MultiFileArtifactType, taskName: String): File =
-            File(project.buildDir, "intermediates/$taskName/$artifactType.txt")
+    override fun setIntermediateLocation(property: Property<out RegularFile>, artifactType: MultiFileArtifactType, taskName: String) {
+        val output = property as RegularFileProperty
+        output.set(File(project.buildDir, "intermediates/$taskName/$artifactType.txt"))
+    }
 
     init {
         for (artifact in MultiFileArtifactType.values()) {
+            init(artifact)
+        }
+    }
+}
+
+class MultiDirectoryHolder(
+        project: Project
+): MultiArtifactHolder<MultiDirectoryArtifactType, Directory, Provider<out Iterable<Directory>>>(project) {
+
+    override val map = EnumMap<MultiDirectoryArtifactType, MultiArtifactInfo<Directory>>(MultiDirectoryArtifactType::class.java)
+
+    override fun newListProperty(): ListProperty<Directory> = project.objects.listProperty(Directory::class.java)
+    override fun setIntermediateLocation(property: Property<out Directory>, artifactType: MultiDirectoryArtifactType, taskName: String) {
+        val output = property as DirectoryProperty
+        output.set(File(project.buildDir, "intermediates/$taskName/$artifactType"))
+    }
+
+    init {
+        for (artifact in MultiDirectoryArtifactType.values()) {
+            init(artifact)
+        }
+    }
+}
+
+class MultiMixedHolder(
+        project: Project
+): MultiArtifactHolder<MultiMixedArtifactType, FileSystemLocation, Provider<out Iterable<FileSystemLocation>>>(project) {
+
+    override val map = EnumMap<MultiMixedArtifactType, MultiArtifactInfo<FileSystemLocation>>(MultiMixedArtifactType::class.java)
+
+    override fun newListProperty(): ListProperty<FileSystemLocation> = project.objects.listProperty(FileSystemLocation::class.java)
+    override fun setIntermediateLocation(
+            property: Property<out FileSystemLocation>,
+            artifactType: MultiMixedArtifactType,
+            taskName: String) {
+        when (property) {
+            is DirectoryProperty -> property.set(File(project.buildDir, "intermediates/$taskName/$artifactType"))
+            is RegularFileProperty -> property.set(File(project.buildDir, "intermediates/$taskName/$artifactType.txt"))
+            else -> throw RuntimeException("Unsupported Property")
+        }
+    }
+
+    init {
+        for (artifact in MultiMixedArtifactType.values()) {
             init(artifact)
         }
     }
@@ -111,7 +154,7 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
     protected abstract val map: MutableMap<ArtifactT, MultiArtifactInfo<ValueT>>
 
     protected abstract fun newListProperty(): ListProperty<ValueT>
-    protected abstract fun newIntermediateLocation(artifactType: ArtifactT, taskName: String): File
+    protected abstract fun setIntermediateLocation(property: Property<out ValueT>, artifactType: ArtifactT, taskName: String)
 
     protected fun init(artifactType: ArtifactT) {
         map[artifactType] = MultiArtifactInfo(::newListProperty)
@@ -142,10 +185,7 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
         info.setFirstProvider(taskProvider.flatMap { outputProvider(it) })
 
         taskProvider.configure {
-            when (val output = outputProvider(it)) {
-                is DirectoryProperty -> output.set(newIntermediateLocation(artifactType, it.name))
-                is RegularFileProperty -> output.set(newIntermediateLocation(artifactType, it.name))
-            }
+            setIntermediateLocation(outputProvider(it), artifactType, it.name)
         }
     }
 
@@ -178,8 +218,8 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
                 inputBuilder.withNormalizer(artifactType.normalizer)
             }
 
-            // set output location and register output
-            processOutput(it, newIntermediateLocation(artifactType, it.name))
+            // set output location
+            setIntermediateLocation(it.outputArtifact, artifactType, it.name)
 
             // run the user's configuration action
             configAction.invoke(it)
@@ -188,12 +228,12 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
         return newTask
     }
 
-    fun <TaskT> append(
+    open fun <TaskT> append(
             artifactType : ArtifactT,
             taskName: String,
             taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<ValueT> {
+    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<out ValueT> {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
 
         val newTask = project.tasks.register(taskName, taskClass)
@@ -202,8 +242,8 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
         info.append(newTask.flatMap { it.outputArtifact })
 
         newTask.configure {
-            // set output location and register output
-            processOutput(it, newIntermediateLocation(artifactType, it.name))
+            // set output location
+            setIntermediateLocation(it.outputArtifact, artifactType, it.name)
             // run the user's configuration action
             configAction.invoke(it)
         }

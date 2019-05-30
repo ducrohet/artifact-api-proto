@@ -22,6 +22,8 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
     private val singleDir = SingleDirectoryHolder(project)
     private val singleFile = SingleFileHolder(project)
     private val multiFile = MultiFileHolder(project)
+    private val multiDir = MultiDirectoryHolder(project)
+    private val multiMixed = MultiMixedHolder(project)
 
     override fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> getArtifact(
             artifactType : SingleArtifactType<ValueT, ProviderT>
@@ -44,7 +46,10 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
             multiFile.getArtifact(artifactType) as ProviderT
         }
         is MultiDirectoryArtifactType -> {
-            TODO("")
+            multiDir.getArtifact(artifactType) as ProviderT
+        }
+        is MultiMixedArtifactType -> {
+            multiMixed.getArtifact(artifactType) as ProviderT
         }
         else -> {
             throw RuntimeException("unsupported MultiArtifactType")
@@ -72,7 +77,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
             multiFile.hasTransforms(artifactType)
         }
         is MultiDirectoryArtifactType -> {
-            TODO("")
+            multiDir.hasTransforms(artifactType)
         }
         else -> {
             throw RuntimeException("unsupported MultiArtifactType")
@@ -86,7 +91,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
             multiFile.hasAppend(artifactType)
         }
         is MultiDirectoryArtifactType -> {
-            TODO("")
+            multiDir.hasAppend(artifactType)
         }
         else -> {
             throw RuntimeException("unsupported MultiArtifactType")
@@ -129,14 +134,17 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
     internal fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>, TaskT: DefaultTask> produces(
             artifactType : MultiArtifactType<ValueT, ProviderT>,
             taskProvider: TaskProvider<TaskT>,
-            outputProvider: (TaskT) -> Property<ValueT>
+            outputProvider: (TaskT) -> Property<out ValueT>
     ) {
         when (artifactType) {
             is MultiFileArtifactType -> {
                 multiFile.produces(artifactType, taskProvider, outputProvider  as ((TaskT) -> Property<RegularFile>))
             }
             is MultiDirectoryArtifactType -> {
-                TODO("")
+                multiDir.produces(artifactType, taskProvider, outputProvider  as ((TaskT) -> Property<Directory>))
+            }
+            is MultiMixedArtifactType -> {
+                multiMixed.produces(artifactType, taskProvider, outputProvider as ((TaskT) -> Property<FileSystemLocation>))
             }
             else -> {
                 throw RuntimeException("unsupported MultiArtifactType")
@@ -157,7 +165,6 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
                 configAction)
 
     }
-
     override fun <TaskT> transform(
             artifactType: SingleFileArtifactType,
             taskName: String,
@@ -183,12 +190,29 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
                 configAction)
     }
 
+    override fun <TaskT> transform(
+            artifactType: MultiDirectoryArtifactType,
+            taskName: String,
+            taskClass: Class<TaskT>,
+            configAction: (TaskT) -> Unit
+    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : DirectoryListConsumerTask, TaskT : DirectoryProducerTask {
+        return multiDir.transform(
+                artifactType,
+                taskName,
+                taskClass,
+                configAction)
+    }
+
     override fun <TaskT> append(
             artifactType: MultiDirectoryArtifactType,
             taskName: String, taskClass: Class<TaskT>,
             configAction: (TaskT) -> Unit
     ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : DirectoryProducerTask {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return multiDir.append(
+                artifactType,
+                taskName,
+                taskClass,
+                configAction)
     }
 
     override fun <TaskT> append(
@@ -198,6 +222,19 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
             configAction: (TaskT) -> Unit
     ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask {
         return multiFile.append(
+                artifactType,
+                taskName,
+                taskClass,
+                configAction)
+    }
+
+    override fun <TaskT> append(
+            artifactType: MultiMixedArtifactType,
+            taskName: String,
+            taskClass: Class<TaskT>,
+            configAction: (TaskT) -> Unit
+    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : ArtifactProducer<out FileSystemLocation> {
+        return multiMixed.append(
                 artifactType,
                 taskName,
                 taskClass,

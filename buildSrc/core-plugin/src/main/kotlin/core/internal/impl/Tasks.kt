@@ -3,11 +3,11 @@
 package core.internal.impl
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFile
-import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.file.*
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.*
+import java.io.File
+import java.lang.RuntimeException
 
 abstract class InternalDirectoryProducerTask : DefaultTask() {
 
@@ -80,6 +80,58 @@ abstract class InternalMultiToSingleFileTransformerTask : DefaultTask() {
         println("\t---")
         println("\tOutput: ${outputArtifact.get().asFile}")
         outputArtifact.get().asFile.writeText("foo\n")
+    }
+}
+
+abstract class InternalMultiToSingleDirectoryTransformerTask : DefaultTask() {
+
+    @get:InputFiles
+    abstract val inputArtifacts: ListProperty<Directory>
+
+    @get:OutputDirectory
+    abstract val outputArtifact: DirectoryProperty
+
+    @TaskAction
+    fun action() {
+        println(name)
+        var index = 1
+        for (file in inputArtifacts.get()) {
+            println("\tInput${index++}: ${file.asFile}")
+        }
+        println("\t---")
+        val folder = outputArtifact.get().asFile
+        println("\tOutput: $folder")
+        folder.mkdirs()
+        File(folder, "foo.txt").writeText("foo\n")
+    }
+}
+
+abstract class InternalMixedToSingleFileTransformerTask : DefaultTask() {
+
+    @get:InputFiles
+    abstract val inputArtifacts: ListProperty<FileSystemLocation>
+
+    @get:OutputFile
+    abstract val outputArtifact: RegularFileProperty
+
+    @TaskAction
+    fun action() {
+        println(name)
+        var index = 1
+        for (file in inputArtifacts.get()) {
+            println("\tInput${index++}: ${file.asFile} (${getType(file)})")
+        }
+        println("\t---")
+        println("\tOutput: ${outputArtifact.get().asFile}")
+        outputArtifact.get().asFile.writeText("foo\n")
+    }
+
+    private fun getType(file: FileSystemLocation): String {
+        return when(file) {
+            is Directory -> "Directory"
+            is RegularFile -> "File"
+            else -> throw RuntimeException("unsupported FileSystemLocation: ${file.javaClass}")
+        }
     }
 }
 

@@ -2,9 +2,7 @@
 
 package core.internal
 
-import core.api.MultiFileArtifactType
-import core.api.SingleDirectoryArtifactType
-import core.api.SingleFileArtifactType
+import core.api.*
 import core.internal.impl.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -75,10 +73,18 @@ class CorePlugin: Plugin<Project> {
     private fun createResourceMerger(artifactHolder: ArtifactHolderImpl) {
         // create the original producer last
         val task = project.tasks.register(
-                "resourceMerger",
+                "resources",
                 InternalDirectoryProducerTask::class.java) { }
 
-        artifactHolder.produces(SingleDirectoryArtifactType.MERGED_RESOURCES, task, { it.outputArtifact })
+        artifactHolder.produces(MultiDirectoryArtifactType.RESOURCES, task, { it.outputArtifact })
+
+        val merger = project.tasks.register(
+                "resourceMerger",
+                InternalMultiToSingleDirectoryTransformerTask::class.java) {
+            it.inputArtifacts.set(artifactHolder.getArtifact(MultiDirectoryArtifactType.RESOURCES))
+        }
+
+        artifactHolder.produces(SingleDirectoryArtifactType.MERGED_RESOURCES, merger, { it.outputArtifact })
     }
 
     private fun createManifestMerger(artifactHolder: ArtifactHolderImpl) {
@@ -91,7 +97,7 @@ class CorePlugin: Plugin<Project> {
         artifactHolder.produces(SingleFileArtifactType.MERGED_MANIFEST, task, { it.outputArtifact })
     }
 
-    private fun createListDirectoryTasks(artifactHolder: ArtifactHolderImpl) {
+    private fun createListDirectoryTasks(holder: ArtifactHolderImpl) {
 
     }
 
@@ -101,12 +107,12 @@ class CorePlugin: Plugin<Project> {
                 "compileCode",
                 InternalFileProducerTask::class.java) { }
 
-        artifactHolder.produces(MultiFileArtifactType.JAR, compiler, { it.outputArtifact })
+        artifactHolder.produces(MultiMixedArtifactType.BYTECODE, compiler, { it.outputArtifact })
 
         val dexer = project.tasks.register(
                 "dexer",
-                InternalMultiToSingleFileTransformerTask::class.java) {
-            it.inputArtifacts.set(artifactHolder.getArtifact(MultiFileArtifactType.JAR))
+                InternalMixedToSingleFileTransformerTask::class.java) {
+            it.inputArtifacts.set(artifactHolder.getArtifact(MultiMixedArtifactType.BYTECODE))
         }
 
         artifactHolder.produces(MultiFileArtifactType.DEX, dexer, { it.outputArtifact })

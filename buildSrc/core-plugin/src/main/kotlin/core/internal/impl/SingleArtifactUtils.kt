@@ -37,6 +37,11 @@ class SingleDirectoryHolder(
         }
     }
 
+    override fun setOutputFromFile(property: Property<Directory>, location: File) {
+        val output = property as DirectoryProperty
+        output.set(location)
+    }
+
     fun finalizeLocations() {
         SingleDirectoryArtifactType.values().filter { it.isOutput }.forEach {
             finalizeLocation(it)
@@ -66,6 +71,11 @@ class SingleFileHolder(
         for (artifact in SingleFileArtifactType.values()) {
             init(artifact)
         }
+    }
+
+    override fun setOutputFromFile(property: Property<RegularFile>, location: File) {
+        val output = property as RegularFileProperty
+        output.set(location)
     }
 
     fun finalizeLocations() {
@@ -193,7 +203,7 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
         map[artifactType] = SingleArtifactInfo(::newProperty)
     }
 
-    fun getArtifact(artifactType : ArtifactT) : Provider<ValueT> =
+    fun getArtifact(artifactType : ArtifactT) : Provider<out ValueT> =
             map[artifactType]?.finalArtifact ?: throw RuntimeException("Did not find artifact for $artifactType")
 
     fun hasTransforms(artifactType : ArtifactT) : Boolean {
@@ -285,11 +295,11 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
                 inputBuilder.withNormalizer(artifactType.normalizer)
             }
 
-            // set output location and register output
+            // set output location
             if (outputLocationProperty != null) {
-                processOutput(it, outputLocationProperty)
+                it.outputArtifact.set(outputLocationProperty)
             } else {
-                processOutput(it, newIntermediateLocation(artifactType, taskName))
+                setOutputFromFile(it.outputArtifact, newIntermediateLocation(artifactType, taskName))
             }
 
             // run the user's configuration action
@@ -298,6 +308,8 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
 
         return newTask
     }
+
+    protected abstract fun setOutputFromFile(property: Property<ValueT>, location: File)
 
     fun finalizeLocation(artifactType: ArtifactT) {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
