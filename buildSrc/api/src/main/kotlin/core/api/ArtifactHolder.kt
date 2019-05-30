@@ -4,6 +4,7 @@ package core.api
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.*
+import org.gradle.api.provider.HasMultipleValues
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
@@ -47,24 +48,22 @@ interface ArtifactHolder {
     ) : ProviderT
 
     /**
-     * Transforms an artifact.
+     * Replaces an artifact.
      *
-     * This registers the task of the given type and wires its input and output (based on [FileConsumerTask] and
-     * [FileProducerTask])
+     * This registers the task as the original creator of this artifact (which can then be transformed by others).
+     * The original task that normally generates this artifact is not created.
      *
      * @param artifactType the type of the artifact to transform
      * @param taskName the name of the task to register
      * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @return a [ArtifactHandler] to finalize configure the task.
      *
      */
     fun <TaskT> replace(
             artifactType: SingleFileArtifactType,
             taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask
+            taskClass: Class<TaskT>
+    ): ArtifactHandler<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask
 
     /**
      * Transforms an artifact.
@@ -217,6 +216,20 @@ interface ArtifactHolder {
     ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<out FileSystemLocation>
 }
 
+interface ArtifactHandler<TaskT> where TaskT: DefaultTask {
+
+    fun finish(configAction: (TaskT) -> Unit) : TaskProvider<TaskT>
+
+    fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> input(
+            artifactType: SingleArtifactType<ValueT, ProviderT>,
+            inputProvider: (TaskT) -> Property<ValueT>
+    ): ArtifactHandler<TaskT>
+
+    fun <ValueT: FileSystemLocation, ProviderT: Provider<out Iterable<ValueT>>> input(
+            artifactType: MultiArtifactType<ValueT, ProviderT>,
+            inputProvider: (TaskT) -> HasMultipleValues<ValueT>
+    ): ArtifactHandler<TaskT>
+}
 
 //----------
 // Base interfaces for input and output of tasks created with append/transform

@@ -52,20 +52,22 @@ class CorePlugin: Plugin<Project> {
             useDexMerger = true
         }
 
-        val packageTask = project.tasks.register("packageApk", PackageTask::class.java) {
-            it.manifest.set(artifactHolder.getArtifact(SingleFileArtifactType.MERGED_MANIFEST))
-            it.mergedResources.set(artifactHolder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES))
-            if (useDexMerger) {
-                val wrapper = project.objects.listProperty(RegularFile::class.java)
-                wrapper.add(artifactHolder.getArtifact(SingleFileArtifactType.MERGED_DEX))
-                it.dexFiles.set(wrapper)
-            } else {
-                it.dexFiles.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
+        if (!artifactHolder.hasProducer(SingleFileArtifactType.PACKAGE)) {
+
+            val packageTask = project.tasks.register("packageApk", PackageTask::class.java) {
+                it.manifest.set(artifactHolder.getArtifact(SingleFileArtifactType.MERGED_MANIFEST))
+                it.mergedResources.set(artifactHolder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES))
+                if (useDexMerger) {
+                    val wrapper = project.objects.listProperty(RegularFile::class.java)
+                    wrapper.add(artifactHolder.getArtifact(SingleFileArtifactType.MERGED_DEX))
+                    it.dexFiles.set(wrapper)
+                } else {
+                    it.dexFiles.set(artifactHolder.getArtifact(MultiFileArtifactType.DEX))
+                }
             }
+
+            artifactHolder.produces(SingleFileArtifactType.PACKAGE, packageTask, { it.outputApk })
         }
-
-        artifactHolder.produces(SingleFileArtifactType.PACKAGE, packageTask, { it.outputApk })
-
 
         project.tasks.register("assemble") {
             it.dependsOn(artifactHolder.getArtifact(SingleFileArtifactType.PACKAGE))

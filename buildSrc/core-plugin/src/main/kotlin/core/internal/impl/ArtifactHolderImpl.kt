@@ -169,9 +169,9 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
     override fun <TaskT> replace(
             artifactType: SingleFileArtifactType,
             taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask {
-        return singleFile.replace(artifactType, taskName, taskClass, configAction)
+            taskClass: Class<TaskT>
+    ): ArtifactHandler<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask {
+        return singleFile.replace(this, artifactType, taskName, taskClass)
     }
 
     override fun <TaskT> transform(

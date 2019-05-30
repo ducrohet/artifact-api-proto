@@ -247,10 +247,11 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
     }
 
     fun <TaskT> replace(
+            artifactHolder: ArtifactHolderImpl,
             artifactType : ArtifactT,
             taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<ValueT> {
+            taskClass: Class<TaskT>
+    ) : ArtifactHandler<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<ValueT> {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
         if (info.isInitialized) {
             throw RuntimeException("Artifact $artifactType already initialized")
@@ -261,25 +262,34 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
         // set the first artifact wrapper to the actual output.
         info.setFirstArtifact(newTask.flatMap { it.outputArtifact })
 
+        val outputLocationProperty: Property<ValueT>? =
+                if (artifactType.isOutput) {
+                    newIntermediateProperty(artifactType, taskName).also {
+                        // if final location is already initialized then this is already transformed and we
+                        // don't want to override the final location.
+                        // if it's not we initialize it
+                        if (info.isFinalLocationInitialized.not()) {
+                            info.finalArtifactLocation = it
+                        }
+                    }
+                } else {
+                    null
+                }
+
         newTask.configure {
-            // if the artifact is an output and there's no transforms on it, then this output
+            // if the artifact is an output, then this output
             // is the final output and should be in the output folder.
             // otherwise, it needs to go in intermediates.
-            // FIXME this needs to be done *after* all the transforms! Since this can now be called in the middle of the transform this needs to be updated
-            val location: File = if (artifactType.isOutput && !info.hasTransforms)
-                newOutputLocation(artifactType)
-            else
-                newIntermediateLocation(artifactType, it.name)
-
-            when (val output = it.outputArtifact) {
-                is DirectoryProperty -> output.set(location)
-                is RegularFileProperty -> output.set(location)
+            // Here we cannot pre-check for transforms as they may be added later, so we end up with
+            // always using the extra indirection
+            if (outputLocationProperty != null) {
+                it.outputArtifact.set(outputLocationProperty)
+            } else {
+                setOutputFromFile(it.outputArtifact, newIntermediateLocation(artifactType, taskName))
             }
-
-            configAction(it)
         }
 
-        return newTask
+        return ArtifactHandlerImpl(artifactHolder, newTask)
     }
 
     fun <TaskT> transform(

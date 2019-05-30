@@ -18,19 +18,8 @@ class CustomPlugin: Plugin<Project> {
                 projectManifest(holder)
                 processCode(holder)
                 processPackage(holder)
-                processDex(holder)
-            }
-        }
-    }
-
-    private fun processDex(holder: ArtifactHolder) {
-        if (mustReplace("dexer")) {
-            holder.replace(
-                    SingleFileArtifactType.MERGED_DEX,
-                    "newDexer",
-                    ExampleDexerTask::class.java
-            ) {
-                it.inputArtifacts.set(holder.getArtifact(MultiMixedArtifactType.BYTECODE))
+                replaceDexer(holder)
+                replaceDexerAndPackage(holder)
             }
         }
     }
@@ -49,7 +38,8 @@ class CustomPlugin: Plugin<Project> {
     }
 
     private fun processCode(holder: ArtifactHolder) {
-        if (mustTransform("code")) {
+        if (mustAdd("code")) {
+
             // ------
             // Mixed Appends
 
@@ -69,7 +59,9 @@ class CustomPlugin: Plugin<Project> {
                     ExampleDirectoryProducerTask::class.java) {
                 // some config here
             }
+        }
 
+        if (mustAdd("dex")) {
             // ------
             // Multi File append
             holder.append(
@@ -126,8 +118,43 @@ class CustomPlugin: Plugin<Project> {
         }
     }
 
+    private fun replaceDexer(holder: ArtifactHolder) {
+        if (mustReplace("dexer")) {
+            holder.replace(
+                    SingleFileArtifactType.MERGED_DEX,
+                    "newDexer",
+                    ExampleDexerTask::class.java
+            ).input(MultiMixedArtifactType.BYTECODE) {
+                it.inputArtifacts
+            }.finish {
+                // some config
+            }
+        }
+    }
+
+    private fun replaceDexerAndPackage(holder: ArtifactHolder) {
+        if (mustReplace("dexerAndPackager")) {
+            holder.replace(
+                    SingleFileArtifactType.PACKAGE,
+                    "newPackager",
+                    NewPackageTask::class.java
+            ).input(SingleFileArtifactType.MERGED_MANIFEST) {
+                it.manifest
+            }.input(MultiMixedArtifactType.BYTECODE) {
+                it.bytecodeFiles
+            }.input(SingleDirectoryArtifactType.MERGED_RESOURCES) {
+                it.mergedResources
+            }.finish {
+                // some config
+            }
+        }
+
+    }
+
+    private fun mustAdd(propName: String): Boolean = project.properties["add.$propName"] == "true"
+
     private fun mustTransform(propName: String): Boolean =
-            project.properties[propName] == "true" || project.properties["transform.all"] == "true"
+            project.properties["transform.$propName"] == "true" || project.properties["transform.all"] == "true"
 
     private fun mustReplace(propName: String): Boolean = project.properties["replace.$propName"] == "true"
 
