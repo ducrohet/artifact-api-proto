@@ -13,9 +13,9 @@ To see what happens, run the `assemble` task. This will run a bunch of tasks, ea
 You will notice a few android-like tasks (compileCode, dexer, manifest merger) that output in the `intermediates` folder, as well as a final packaging task that writes the output in the `outputs` folder.
 
 Running the same `assemble` task with modifiers allow to see tasks append, transform and/or replace artifacts. (best run with `clean` to be sure to see each task run). The available modifiers are in the format `P<name>=true/false` with the following available names
-	- `transform.[resources|manifest|package|all]`
-	- `add.[code|dex]`
-	- `replace.[dexer|dexerAndPackager]`
+- `transform.[resources|manifest|package|all]`
+- `add.[code|dex]`
+- `replace.[dexer|dexerAndPackager]`
 
 Notice the transforms tasks injecting themselves between the original producer and consumer tasks, adding new inputs to existing tasks, or replacing existing tasks.
 
