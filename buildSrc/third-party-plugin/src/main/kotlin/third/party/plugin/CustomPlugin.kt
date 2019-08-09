@@ -1,8 +1,14 @@
+@file:Suppress("UnstableApiUsage")
+
 package third.party.plugin
 
 import core.api.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.provider.HasMultipleValues
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 
 class CustomPlugin: Plugin<Project> {
 
@@ -136,31 +142,40 @@ class CustomPlugin: Plugin<Project> {
 
     private fun replaceDexer(holder: ArtifactHolder) {
         if (mustReplace("dexer")) {
+            val dexerInput = holder.getArtifact(MultiMixedArtifactType.BYTECODE)
+
+            val dexerReplacementProvider = project.tasks.register(
+                    "newDexer",
+                    ExampleDexerTask::class.java) {
+                it.inputArtifacts.setAndLock(dexerInput)
+            }
             holder.replace(
                     SingleFileArtifactType.MERGED_DEX,
-                    "newDexer",
-                    ExampleDexerTask::class.java
-            ).input(MultiMixedArtifactType.BYTECODE, ExampleDexerTask::inputArtifacts
-            ).finish {
-                // some config
-            }
+                    dexerReplacementProvider,
+                    ExampleDexerTask::outputArtifact)
         }
     }
 
     private fun replaceDexerAndPackage(holder: ArtifactHolder) {
         if (mustReplace("dexerAndPackager")) {
-            holder.replace(
-                    SingleFileArtifactType.PACKAGE,
+            val manifestInput = holder.getArtifact(SingleFileArtifactType.MERGED_MANIFEST)
+            val bytecodeInput = holder.getArtifact(MultiMixedArtifactType.BYTECODE)
+            val mergedResInput = holder.getArtifact(SingleDirectoryArtifactType.MERGED_RESOURCES)
+
+            val packageReplacementProvider = project.tasks.register(
                     "newPackager",
                     NewPackageTask::class.java
-            ).input(SingleFileArtifactType.MERGED_MANIFEST, NewPackageTask::manifest
-            ).input(MultiMixedArtifactType.BYTECODE, NewPackageTask::bytecodeFiles
-            ).input(SingleDirectoryArtifactType.MERGED_RESOURCES, NewPackageTask::mergedResources
-            ).finish {
-                // some config
+            ) {
+                it.manifest.setAndLock(manifestInput)
+                it.bytecodeFiles.setAndLock(bytecodeInput)
+                it.mergedResources.setAndLock(mergedResInput)
             }
-        }
 
+            holder.replace(
+                    SingleFileArtifactType.PACKAGE,
+                    packageReplacementProvider,
+                    NewPackageTask::outputArtifact)
+        }
     }
 
     private fun mustAdd(propName: String): Boolean =
@@ -171,4 +186,14 @@ class CustomPlugin: Plugin<Project> {
 
     private fun mustReplace(propName: String): Boolean =
             project.properties["replace.$propName"] == "true" || project . properties ["replace.all"] == "true"
+}
+
+private fun <T: FileSystemLocation> Property<T>.setAndLock(value: Provider<out T>) {
+    set(value)
+    disallowChanges()
+}
+
+private fun <T:FileSystemLocation> HasMultipleValues<T>.setAndLock(values: Provider<out Iterable<out T>>) {
+    set(values)
+    disallowChanges()
 }

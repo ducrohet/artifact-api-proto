@@ -238,32 +238,33 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             else
                 newIntermediateLocation(artifactType, it.name)
 
-            when (val output = outputProvider(it)) {
-                is DirectoryProperty -> output.set(location)
-                is RegularFileProperty -> output.set(location)
+            outputProvider(it).run {
+                // work around the fact that this is just Property<ValueT>
+                when (this) {
+                    is DirectoryProperty -> set(location)
+                    is RegularFileProperty -> set(location)
+                }
+                disallowChanges()
             }
         }
     }
 
-    fun <TaskT> replace(
-            artifactHolder: ArtifactHolderImpl,
+    fun <TaskT: DefaultTask> replace(
             artifactType : ArtifactT,
-            taskName: String,
-            taskClass: Class<TaskT>
-    ) : ArtifactHandler<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<ValueT> {
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> Property<ValueT>
+    ) {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
         if (info.isInitialized) {
             throw RuntimeException("Artifact $artifactType already initialized")
         }
 
-        val newTask = project.tasks.register(taskName, taskClass)
-
         // set the first artifact wrapper to the actual output.
-        info.setFirstArtifact(newTask.flatMap { it.outputArtifact })
+        info.setFirstArtifact(taskProvider.flatMap { outputProvider(it) })
 
         val outputLocationProperty: Property<ValueT>? =
                 if (artifactType.isOutput) {
-                    newIntermediateProperty(artifactType, taskName).also {
+                    newIntermediateProperty(artifactType, taskProvider.name).also {
                         // if final location is already initialized then this is already transformed and we
                         // don't want to override the final location.
                         // if it's not we initialize it
@@ -275,20 +276,21 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
                     null
                 }
 
-        newTask.configure {
+        taskProvider.configure {
             // if the artifact is an output, then this output
             // is the final output and should be in the output folder.
             // otherwise, it needs to go in intermediates.
             // Here we cannot pre-check for transforms as they may be added later, so we end up with
             // always using the extra indirection
-            if (outputLocationProperty != null) {
-                it.outputArtifact.set(outputLocationProperty)
-            } else {
-                setOutputFromFile(it.outputArtifact, newIntermediateLocation(artifactType, taskName))
+            outputProvider(it).run {
+                if (outputLocationProperty != null) {
+                    set(outputLocationProperty)
+                } else {
+                    setOutputFromFile(this, newIntermediateLocation(artifactType, it.name))
+                }
+                disallowChanges()
             }
         }
-
-        return ArtifactHandlerImpl(artifactHolder, newTask)
     }
 
     fun <TaskT: DefaultTask> transform(
@@ -320,10 +322,7 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
 
         taskProvider.configure {
             // set input value
-            inputProvider(it).run {
-                set(previousCurrent)
-                disallowChanges()
-            }
+            inputProvider(it).setAndLock(previousCurrent)
 
             // set output location
             outputProvider(it).run {
@@ -349,4 +348,9 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
             }
         }
     }
+}
+
+private fun <T: FileSystemLocation> Property<T>.setAndLock(value: Provider<out T>) {
+    set(value)
+    disallowChanges()
 }

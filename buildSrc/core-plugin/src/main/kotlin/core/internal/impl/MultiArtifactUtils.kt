@@ -186,7 +186,10 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
         info.setFirstProvider(taskProvider.flatMap { outputProvider(it) })
 
         taskProvider.configure {
-            setIntermediateLocation(outputProvider(it), artifactType, it.name)
+            outputProvider(it).run {
+                setIntermediateLocation(this, artifactType, it.name)
+                disallowChanges()
+            }
         }
     }
 

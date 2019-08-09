@@ -106,10 +106,13 @@ abstract class ExampleDirListTransformerTask: DefaultTask() {
 }
 
 @Suppress("UnstableApiUsage")
-abstract class ExampleDexerTask: DefaultTask(), FileProducerTask {
+abstract class ExampleDexerTask: DefaultTask() {
 
-    @get:Internal
+    @get:InputFiles
     abstract val inputArtifacts: ListProperty<FileSystemLocation>
+
+    @get:OutputFile
+    abstract val outputArtifact: RegularFileProperty
 
     @TaskAction
     fun action() {
@@ -125,13 +128,19 @@ abstract class ExampleDexerTask: DefaultTask(), FileProducerTask {
 }
 
 @Suppress("UnstableApiUsage")
-abstract class NewPackageTask: DefaultTask(), FileProducerTask {
+abstract class NewPackageTask: DefaultTask() {
 
+    @get:InputFile
     abstract val manifest: RegularFileProperty
 
+    @get:InputFiles
     abstract val bytecodeFiles: ListProperty<FileSystemLocation>
 
+    @get:InputDirectory
     abstract val mergedResources: DirectoryProperty
+
+    @get:OutputFile
+    abstract val outputArtifact: RegularFileProperty
 
     @TaskAction
     fun action() {

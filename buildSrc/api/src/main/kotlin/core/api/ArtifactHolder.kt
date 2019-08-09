@@ -54,16 +54,15 @@ interface ArtifactHolder {
      * The original task that normally generates this artifact is not created.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @return a [ArtifactHandler] to finalize configure the task.
+     * @param taskProvider the provider for the task doing the replace
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> replace(
+    fun <TaskT: DefaultTask> replace(
             artifactType: SingleFileArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>
-    ): ArtifactHandler<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> RegularFileProperty
+    )
 
     /**
      * Transforms an artifact.
@@ -149,7 +148,7 @@ interface ArtifactHolder {
      * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskProvider the provider for the task doing the transform
+     * @param taskProvider the provider for the task doing the append
      * @param outputProvider the lambda returning the output field of the task
      *
      */
@@ -167,7 +166,7 @@ interface ArtifactHolder {
      * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskProvider the provider for the task doing the transform
+     * @param taskProvider the provider for the task doing the append
      * @param outputProvider the lambda returning the output field of the task
      *
      */
@@ -185,7 +184,7 @@ interface ArtifactHolder {
      * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskProvider the provider for the task doing the transform
+     * @param taskProvider the provider for the task doing the append
      * @param outputProvider the lambda returning the output field of the task
      *
      */
@@ -197,8 +196,6 @@ interface ArtifactHolder {
 }
 
 interface ArtifactHandler<TaskT> where TaskT: DefaultTask {
-
-    fun finish(configAction: (TaskT) -> Unit) : TaskProvider<TaskT>
 
     fun <ValueT: FileSystemLocation, ProviderT: Provider<ValueT>> input(
             artifactType: SingleArtifactType<ValueT, ProviderT>,
