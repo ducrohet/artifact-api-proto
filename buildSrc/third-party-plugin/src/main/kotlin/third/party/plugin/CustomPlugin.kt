@@ -163,11 +163,12 @@ class CustomPlugin: Plugin<Project> {
 
     }
 
-    private fun mustAdd(propName: String): Boolean = project.properties["add.$propName"] == "true"
+    private fun mustAdd(propName: String): Boolean =
+            project.properties["add.$propName"] == "true" || project.properties["add.all"] == "true"
 
     private fun mustTransform(propName: String): Boolean =
             project.properties["transform.$propName"] == "true" || project.properties["transform.all"] == "true"
 
-    private fun mustReplace(propName: String): Boolean = project.properties["replace.$propName"] == "true"
-
+    private fun mustReplace(propName: String): Boolean =
+            project.properties["replace.$propName"] == "true" || project . properties ["replace.all"] == "true"
 }

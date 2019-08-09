@@ -14,8 +14,8 @@ You will notice a few android-like tasks (compileCode, dexer, manifest merger) t
 
 Running the same `assemble` task with modifiers allow to see tasks append, transform and/or replace artifacts. (best run with `clean` to be sure to see each task run). The available modifiers are in the format `-P<name>=true/false` with the following available names
 - `transform.[resources|manifest|package|all]`
-- `add.[code|dex]`
-- `replace.[dexer|dexerAndPackager]`
+- `add.[code|dex|all]`
+- `replace.[dexer|dexerAndPackager|all]`
 
 Notice the transforms tasks injecting themselves between the original producer and consumer tasks, adding new inputs to existing tasks, or replacing existing tasks.
 
