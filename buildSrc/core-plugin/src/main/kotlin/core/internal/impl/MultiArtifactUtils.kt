@@ -216,26 +216,21 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
         }
     }
 
-    open fun <TaskT> append(
+    open fun <TaskT: DefaultTask> append(
             artifactType : ArtifactT,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<out ValueT> {
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> Property<out ValueT>
+    ) {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
 
-        val newTask = project.tasks.register(taskName, taskClass)
-
         // append the task output
-        info.append(newTask.flatMap { it.outputArtifact })
+        info.append(taskProvider.flatMap { outputProvider(it) })
 
-        newTask.configure {
-            // set output location
-            setIntermediateLocation(it.outputArtifact, artifactType, it.name)
-            // run the user's configuration action
-            configAction.invoke(it)
+        taskProvider.configure {
+            outputProvider(it).run {
+                setIntermediateLocation(this, artifactType, it.name)
+                disallowChanges()
+            }
         }
-
-        return newTask
     }
 }

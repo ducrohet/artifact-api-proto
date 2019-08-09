@@ -44,32 +44,35 @@ class CustomPlugin: Plugin<Project> {
             // Mixed Appends
 
             // append file
+            val bcAppendProvider1 = project.tasks.register(
+                    "generateCode1",
+                    ExampleFileProducerTask::class.java)
             holder.append(
                     MultiMixedArtifactType.BYTECODE,
-                    "generateCode1",
-                    ExampleFileProducerTask::class.java
-            ) {
-                // some config here
-            }
+                    bcAppendProvider1,
+                    ExampleFileProducerTask::outputArtifact)
 
             // append directory
+            val bcAppendProvider2 = project.tasks.register(
+                    "generateCode2",
+                    ExampleDirectoryProducerTask::class.java)
             holder.append(
                     MultiMixedArtifactType.BYTECODE,
-                    "generateCode2",
-                    ExampleDirectoryProducerTask::class.java) {
-                // some config here
-            }
+                    bcAppendProvider2,
+                    ExampleDirectoryProducerTask::outputArtifact)
         }
 
         if (mustAdd("dex")) {
             // ------
             // Multi File append
+            val dexAppendProvider = project.tasks.register(
+                    "generateDex",
+                    ExampleFileProducerTask::class.java)
+
             holder.append(
                     MultiFileArtifactType.DEX,
-                    "generateDex",
-                    ExampleFileProducerTask::class.java) {
-                // some config here
-            }
+                    dexAppendProvider,
+                    ExampleFileProducerTask::outputArtifact)
         }
     }
 
@@ -92,12 +95,14 @@ class CustomPlugin: Plugin<Project> {
         if (mustTransform("resources")) {
             // ------
             // Single and multi Folder append/transform
+            val resAppendProvider = project.tasks.register(
+                    "generateResources",
+                    ExampleDirectoryProducerTask::class.java
+            )
             holder.append(
                     MultiDirectoryArtifactType.RESOURCES,
-                    "generateResources",
-                    ExampleDirectoryProducerTask::class.java) {
-                // some config here
-            }
+                    resAppendProvider,
+                    ExampleDirectoryProducerTask::outputArtifact)
 
             val resTransformProvider = project.tasks.register(
                     "transformResources",
@@ -109,12 +114,14 @@ class CustomPlugin: Plugin<Project> {
                     ExampleDirListTransformerTask::outputArtifact)
 
 
+            val resAppendProvider2 = project.tasks.register(
+                    "generateMoreResources",
+                    ExampleDirectoryProducerTask::class.java
+            )
             holder.append(
                     MultiDirectoryArtifactType.RESOURCES,
-                    "generateMoreResources",
-                    ExampleDirectoryProducerTask::class.java) {
-                // some config here
-            }
+                    resAppendProvider2,
+                    ExampleDirectoryProducerTask::outputArtifact)
 
             val mergedResTransformProvider = project.tasks.register(
                     "transformMergedResources",

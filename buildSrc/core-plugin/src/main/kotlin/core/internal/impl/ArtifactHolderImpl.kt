@@ -179,7 +179,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
             inputProvider: (TaskT) -> DirectoryProperty,
             outputProvider: (TaskT) -> DirectoryProperty
     ) {
-        return singleDir.transform(
+        singleDir.transform(
                 artifactType,
                 taskProvider,
                 inputProvider,
@@ -192,7 +192,7 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
             inputProvider: (TaskT) -> RegularFileProperty,
             outputProvider: (TaskT) -> RegularFileProperty
     ) {
-        return singleFile.transform(
+        singleFile.transform(
                 artifactType,
                 taskProvider,
                 inputProvider,
@@ -204,57 +204,56 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
             taskProvider: TaskProvider<TaskT>,
             inputProvider: (TaskT) -> ListProperty<RegularFile>,
             outputProvider: (TaskT) -> RegularFileProperty) {
-        return multiFile.transform(
+        multiFile.transform(
                 artifactType,
                 taskProvider,
                 inputProvider,
                 outputProvider)
     }
 
-    override fun <TaskT : DefaultTask> transform(artifactType: MultiDirectoryArtifactType, taskProvider: TaskProvider<TaskT>, inputProvider: (TaskT) -> ListProperty<Directory>, outputProvider: (TaskT) -> DirectoryProperty) {
-        return multiDir.transform(
-                artifactType,
-                taskProvider,
-                inputProvider,
-                outputProvider)
-    }
-
-    override fun <TaskT> append(
+    override fun <TaskT : DefaultTask> transform(
             artifactType: MultiDirectoryArtifactType,
-            taskName: String, taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : DirectoryProducerTask {
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> ListProperty<Directory>,
+            outputProvider: (TaskT) -> DirectoryProperty) {
+        multiDir.transform(
+                artifactType,
+                taskProvider,
+                inputProvider,
+                outputProvider)
+    }
+
+    override fun <TaskT: DefaultTask> append(
+            artifactType: MultiDirectoryArtifactType,
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> DirectoryProperty
+    ) {
         return multiDir.append(
                 artifactType,
-                taskName,
-                taskClass,
-                configAction)
+                taskProvider,
+                outputProvider)
     }
 
-    override fun <TaskT> append(
+    override fun <TaskT: DefaultTask> append(
             artifactType: MultiFileArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileProducerTask {
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> RegularFileProperty
+    ) {
         return multiFile.append(
                 artifactType,
-                taskName,
-                taskClass,
-                configAction)
+                taskProvider,
+                outputProvider)
     }
 
-    override fun <TaskT> append(
+    override fun <TaskT : DefaultTask> append(
             artifactType: MultiMixedArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : ArtifactProducer<out FileSystemLocation> {
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> Property<out FileSystemLocation>
+    ) {
         return multiMixed.append(
                 artifactType,
-                taskName,
-                taskClass,
-                configAction)
+                taskProvider,
+                outputProvider)
     }
 
     fun finalizeLocations() {

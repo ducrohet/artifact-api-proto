@@ -22,7 +22,10 @@ abstract class ExampleDirectoryTransformerTask: DefaultTask(), DirectoryProducer
     }
 }
 
-abstract class ExampleFileProducerTask : DefaultTask(), FileProducerTask {
+abstract class ExampleFileProducerTask : DefaultTask() {
+
+    @get:OutputFile
+    abstract val outputArtifact: RegularFileProperty
 
     @TaskAction
     fun action() {
@@ -32,7 +35,10 @@ abstract class ExampleFileProducerTask : DefaultTask(), FileProducerTask {
     }
 }
 
-abstract class ExampleDirectoryProducerTask : DefaultTask(), DirectoryProducerTask {
+abstract class ExampleDirectoryProducerTask : DefaultTask() {
+
+    @get:OutputDirectory
+    abstract val outputArtifact: DirectoryProperty
 
     @TaskAction
     fun action() {

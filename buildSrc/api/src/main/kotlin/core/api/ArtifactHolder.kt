@@ -144,68 +144,56 @@ interface ArtifactHolder {
     /**
      * Appends a task-generated Directory to an artifact.
      *
-     * This registers the task of the given type and wires its output (based on [DirectoryProducerTask])
-     * The output is a single Directory.
+     * This configures the task output.
      *
      * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @param taskProvider the provider for the task doing the transform
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> append(
+    fun <TaskT: DefaultTask> append(
             artifactType : MultiDirectoryArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: DirectoryProducerTask
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> DirectoryProperty
+    )
 
     /**
      * Appends a task-generated File to an artifact.
      *
-     * This registers the task of the given type and wires its output (based on [FileProducerTask])
-     * The output is a single File.
+     * This configures the task output.
      *
      * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @param taskProvider the provider for the task doing the transform
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> append(
+    fun <TaskT: DefaultTask> append(
             artifactType : MultiFileArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: FileProducerTask
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> RegularFileProperty
+    )
 
     /**
      * Appends a task-generated or folder to a mixed artifact.
      *
-     * This registers the task of the given type and wires its output (based on [ArtifactProducer])
-     * The output is a single File.
+     * This configures the task output.
      *
      * Appends always happen before any transforms. Transforms are guaranteed to see all the appended outputs.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @param taskProvider the provider for the task doing the transform
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> append(
+    fun <TaskT : DefaultTask> append(
             artifactType : MultiMixedArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactProducer<out FileSystemLocation>
+            taskProvider: TaskProvider<TaskT>,
+            outputProvider: (TaskT) -> Property<out FileSystemLocation>
+    )
 }
 
 interface ArtifactHandler<TaskT> where TaskT: DefaultTask {
