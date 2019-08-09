@@ -11,7 +11,13 @@ import java.io.File
 import java.lang.RuntimeException
 
 
-abstract class ExampleDirectoryTransformerTask: DefaultTask(), DirectoryProducerTask, DirectoryConsumerTask {
+abstract class ExampleDirectoryTransformerTask: DefaultTask() {
+
+    @get:InputDirectory
+    abstract val inputArtifact: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputArtifact: DirectoryProperty
 
     @TaskAction
     fun action() {
@@ -68,7 +74,13 @@ abstract class ExampleFileTransformerTask: DefaultTask() {
     }
 }
 
-abstract class ExampleFileListTransformerTask: DefaultTask(), FileListConsumerTask, FileProducerTask {
+abstract class ExampleFileListTransformerTask: DefaultTask() {
+
+    @get:InputFiles
+    abstract val inputArtifacts: ListProperty<RegularFile>
+
+    @get:OutputFile
+    abstract val outputArtifact: RegularFileProperty
 
     @TaskAction
     fun action() {
