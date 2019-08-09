@@ -68,42 +68,38 @@ interface ArtifactHolder {
     /**
      * Transforms an artifact.
      *
-     * This registers the task of the given type and wires its input and output (based on [DirectoryConsumerTask] and
-     * [DirectoryProducerTask])
+     * This configures the task input and output.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @param taskProvider the provider for the task doing the transform
+     * @param inputProvider the lambda returning the input field of the task
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> transform(
+    fun <TaskT: DefaultTask> transform(
             artifactType: SingleDirectoryArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : DirectoryConsumerTask, TaskT : DirectoryProducerTask
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> DirectoryProperty,
+            outputProvider: (TaskT) -> DirectoryProperty
+    )
 
     /**
      * Transforms an artifact.
      *
-     * This registers the task of the given type and wires its input and output (based on [FileConsumerTask] and
-     * [FileProducerTask])
+     * This configures the task input and output.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @param taskProvider the provider for the task doing the transform
+     * @param inputProvider the lambda returning the input field of the task
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> transform(
+    fun <TaskT: DefaultTask> transform(
             artifactType: SingleFileArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileConsumerTask, TaskT : FileProducerTask
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> RegularFileProperty,
+            outputProvider: (TaskT) -> RegularFileProperty
+    )
 
     /**
      * Transforms an artifact.
@@ -246,10 +242,6 @@ interface DirectoryConsumerTask: ArtifactConsumer<Directory> {
 interface FileProducerTask: ArtifactProducer<RegularFile> {
     @get:OutputFile
     override val outputArtifact: RegularFileProperty
-}
-
-interface FileConsumerTask: ArtifactConsumer<RegularFile> {
-    override val inputArtifact: RegularFileProperty
 }
 
 interface FileListConsumerTask : ArtifactListConsumer<RegularFile> {

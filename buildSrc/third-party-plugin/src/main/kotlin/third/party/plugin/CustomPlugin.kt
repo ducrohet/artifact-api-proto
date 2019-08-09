@@ -28,12 +28,12 @@ class CustomPlugin: Plugin<Project> {
         if (mustTransform("package")) {
             // ------
             // Output Transform
-            holder.transform(
-                    SingleFileArtifactType.PACKAGE,
-                    "transformPackage",
-                    ExampleFileTransformerTask::class.java) {
-                // some config here
-            }
+            val taskProvider = project.tasks.register("transformPackage", ExampleFileTransformerTask::class.java)
+
+            holder.transform(SingleFileArtifactType.PACKAGE,
+                    taskProvider,
+                    ExampleFileTransformerTask::inputArtifact,
+                    ExampleFileTransformerTask::outputArtifact)
         }
     }
 
@@ -77,12 +77,12 @@ class CustomPlugin: Plugin<Project> {
         if (mustTransform("manifest")) {
             // ------
             // File Transform
-            holder.transform(
-                    SingleFileArtifactType.MERGED_MANIFEST,
-                    "transformManifest",
-                    ExampleFileTransformerTask::class.java) {
-                // some config here
-            }
+            val taskProvider = project.tasks.register("transformManifest", ExampleFileTransformerTask::class.java)
+
+            holder.transform(SingleFileArtifactType.MERGED_MANIFEST,
+                    taskProvider,
+                    ExampleFileTransformerTask::inputArtifact,
+                    ExampleFileTransformerTask::outputArtifact)
         }
     }
 
@@ -109,12 +109,12 @@ class CustomPlugin: Plugin<Project> {
                 // some config here
             }
 
-            holder.transform(
-                    SingleDirectoryArtifactType.MERGED_RESOURCES,
-                    "transformMergedResources",
-                    ExampleDirectoryTransformerTask::class.java) {
-                // some config here
-            }
+            val taskProvider = project.tasks.register("transformMergedResources", ExampleDirectoryTransformerTask::class.java)
+
+            holder.transform(SingleDirectoryArtifactType.MERGED_RESOURCES,
+                    taskProvider,
+                    ExampleDirectoryTransformerTask::inputArtifact,
+                    ExampleDirectoryTransformerTask::outputArtifact)
         }
     }
 

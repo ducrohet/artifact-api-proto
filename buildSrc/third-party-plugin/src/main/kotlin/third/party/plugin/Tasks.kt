@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 package third.party.plugin
 
 import core.api.*
@@ -42,7 +44,13 @@ abstract class ExampleDirectoryProducerTask : DefaultTask(), DirectoryProducerTa
     }
 }
 
-abstract class ExampleFileTransformerTask: DefaultTask(), FileProducerTask, FileConsumerTask {
+abstract class ExampleFileTransformerTask: DefaultTask() {
+
+    @get:InputFile
+    abstract val inputArtifact: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputArtifact: RegularFileProperty
 
     @TaskAction
     fun action() {

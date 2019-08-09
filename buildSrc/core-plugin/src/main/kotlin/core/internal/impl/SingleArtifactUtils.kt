@@ -7,7 +7,6 @@ import org.gradle.api.Project
 import org.gradle.api.file.*
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.TaskInputFilePropertyBuilder
 import org.gradle.api.tasks.TaskProvider
 import java.io.File
 import java.util.*
@@ -292,73 +291,50 @@ abstract class SingleArtifactHolder<ArtifactT: SingleArtifactType<ValueT, Provid
         return ArtifactHandlerImpl(artifactHolder, newTask)
     }
 
-    fun <TaskT> transform(
+    fun <TaskT: DefaultTask> transform(
             artifactType : ArtifactT,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactConsumer<ValueT>, TaskT: ArtifactProducer<ValueT> {
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> Property<ValueT>,
+            outputProvider: (TaskT) -> Property<ValueT>
+    )  {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
         if (info.isInitialized) {
             throw RuntimeException("Cannot add transform on $artifactType. produces() already called")
         }
 
-        val newTask = project.tasks.register(taskName, taskClass)
-
         // update the info with the new output and get the previous output. This will be used
         // to configure the input of the task
-        val previousCurrent = info.setNewOutput(newTask.flatMap { it.outputArtifact} )
+        val previousCurrent = info.setNewOutput(taskProvider.flatMap { outputProvider(it) } )
 
         // if the artifact is an output, then wrap the location of the task output in a property
         // that we keep track off. This way we can go back and set the final version to the outputs
         // folder.
         val outputLocationProperty: Property<ValueT>? =
                 if (artifactType.isOutput) {
-                    newIntermediateProperty(artifactType, taskName).also {
+                    newIntermediateProperty(artifactType, taskProvider.name).also {
                         info.finalArtifactLocation = it
                     }
                 } else {
                     null
                 }
 
-
-        newTask.configure {
+        taskProvider.configure {
             // set input value
-            it.inputArtifact.set(previousCurrent)
-
-            // register the inputs on the task, including setting the sensitivity and normalizer
-            val inputBuilder: TaskInputFilePropertyBuilder = when (val input = it.inputArtifact) {
-                is DirectoryProperty -> {
-                    it.inputs.dir(input)
-                }
-                is RegularFileProperty -> {
-                    it.inputs.file(input)
-                }
-                else -> {
-                    throw RuntimeException("Unexpected input type: ${input.javaClass}")
-                }
-            }
-
-            inputBuilder.withPropertyName("inputArtifact")
-            if (artifactType.sensitivity != null) {
-                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-                inputBuilder.withPathSensitivity(artifactType.sensitivity)
-            } else if (artifactType.normalizer != null) {
-                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-                inputBuilder.withNormalizer(artifactType.normalizer)
+            inputProvider(it).run {
+                set(previousCurrent)
+                disallowChanges()
             }
 
             // set output location
-            if (outputLocationProperty != null) {
-                it.outputArtifact.set(outputLocationProperty)
-            } else {
-                setOutputFromFile(it.outputArtifact, newIntermediateLocation(artifactType, taskName))
+            outputProvider(it).run {
+                if (outputLocationProperty != null) {
+                    set(outputLocationProperty)
+                } else {
+                    setOutputFromFile(this, newIntermediateLocation(artifactType, taskProvider.name))
+                }
+                disallowChanges()
             }
-
-            // run the user's configuration action
-            configAction(it)
         }
-
-        return newTask
     }
 
     protected abstract fun setOutputFromFile(property: Property<ValueT>, location: File)

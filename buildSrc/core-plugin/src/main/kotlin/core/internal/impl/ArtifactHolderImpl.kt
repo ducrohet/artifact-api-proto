@@ -3,9 +3,7 @@ package core.internal.impl
 import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
-import org.gradle.api.file.FileSystemLocation
-import org.gradle.api.file.RegularFile
+import org.gradle.api.file.*
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
@@ -174,30 +172,30 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
         return singleFile.replace(this, artifactType, taskName, taskClass)
     }
 
-    override fun <TaskT> transform(
+    override fun <TaskT: DefaultTask> transform(
             artifactType: SingleDirectoryArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT : DefaultTask, TaskT : DirectoryConsumerTask, TaskT : DirectoryProducerTask {
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> DirectoryProperty,
+            outputProvider: (TaskT) -> DirectoryProperty
+    ) {
         return singleDir.transform(
                 artifactType,
-                taskName,
-                taskClass,
-                configAction)
-
+                taskProvider,
+                inputProvider,
+                outputProvider)
     }
-    override fun <TaskT> transform(
+
+    override fun <TaskT: DefaultTask> transform(
             artifactType: SingleFileArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT : DefaultTask, TaskT : FileConsumerTask, TaskT : FileProducerTask {
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> RegularFileProperty,
+            outputProvider: (TaskT) -> RegularFileProperty
+    ) {
         return singleFile.transform(
                 artifactType,
-                taskName,
-                taskClass,
-                configAction)
+                taskProvider,
+                inputProvider,
+                outputProvider)
     }
 
     override fun <TaskT> transform(
