@@ -77,7 +77,13 @@ abstract class ExampleFileListTransformerTask: DefaultTask(), FileListConsumerTa
     }
 }
 
-abstract class ExampleDirListTransformerTask: DefaultTask(), DirectoryListConsumerTask, DirectoryProducerTask {
+abstract class ExampleDirListTransformerTask: DefaultTask() {
+
+    @get:InputFiles
+    abstract val inputArtifacts: ListProperty<Directory>
+
+    @get:OutputDirectory
+    abstract val outputArtifact: DirectoryProperty
 
     @TaskAction
     fun action() {

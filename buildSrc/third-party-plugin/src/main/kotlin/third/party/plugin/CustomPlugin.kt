@@ -77,7 +77,9 @@ class CustomPlugin: Plugin<Project> {
         if (mustTransform("manifest")) {
             // ------
             // File Transform
-            val taskProvider = project.tasks.register("transformManifest", ExampleFileTransformerTask::class.java)
+            val taskProvider = project.tasks.register(
+                    "transformManifest",
+                    ExampleFileTransformerTask::class.java)
 
             holder.transform(SingleFileArtifactType.MERGED_MANIFEST,
                     taskProvider,
@@ -96,12 +98,17 @@ class CustomPlugin: Plugin<Project> {
                     ExampleDirectoryProducerTask::class.java) {
                 // some config here
             }
+
+            val resTransformProvider = project.tasks.register(
+                    "transformResources",
+                    ExampleDirListTransformerTask::class.java)
             holder.transform(
                     MultiDirectoryArtifactType.RESOURCES,
-                    "transformResources",
-                    ExampleDirListTransformerTask::class.java) {
-                // some config here
-            }
+                    resTransformProvider,
+                    ExampleDirListTransformerTask::inputArtifacts,
+                    ExampleDirListTransformerTask::outputArtifact)
+
+
             holder.append(
                     MultiDirectoryArtifactType.RESOURCES,
                     "generateMoreResources",
@@ -109,10 +116,12 @@ class CustomPlugin: Plugin<Project> {
                 // some config here
             }
 
-            val taskProvider = project.tasks.register("transformMergedResources", ExampleDirectoryTransformerTask::class.java)
+            val mergedResTransformProvider = project.tasks.register(
+                    "transformMergedResources",
+                    ExampleDirectoryTransformerTask::class.java)
 
             holder.transform(SingleDirectoryArtifactType.MERGED_RESOURCES,
-                    taskProvider,
+                    mergedResTransformProvider,
                     ExampleDirectoryTransformerTask::inputArtifact,
                     ExampleDirectoryTransformerTask::outputArtifact)
         }

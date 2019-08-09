@@ -4,6 +4,7 @@ import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.*
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
@@ -198,29 +199,24 @@ class ArtifactHolderImpl(project: Project) : ArtifactHolder {
                 outputProvider)
     }
 
-    override fun <TaskT> transform(
+    override fun <TaskT : DefaultTask> transform(
             artifactType: MultiFileArtifactType,
-            taskName: String, taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : FileListConsumerTask, TaskT : FileProducerTask {
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> ListProperty<RegularFile>,
+            outputProvider: (TaskT) -> RegularFileProperty) {
         return multiFile.transform(
                 artifactType,
-                taskName,
-                taskClass,
-                configAction)
+                taskProvider,
+                inputProvider,
+                outputProvider)
     }
 
-    override fun <TaskT> transform(
-            artifactType: MultiDirectoryArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT : DirectoryListConsumerTask, TaskT : DirectoryProducerTask {
+    override fun <TaskT : DefaultTask> transform(artifactType: MultiDirectoryArtifactType, taskProvider: TaskProvider<TaskT>, inputProvider: (TaskT) -> ListProperty<Directory>, outputProvider: (TaskT) -> DirectoryProperty) {
         return multiDir.transform(
                 artifactType,
-                taskName,
-                taskClass,
-                configAction)
+                taskProvider,
+                inputProvider,
+                outputProvider)
     }
 
     override fun <TaskT> append(

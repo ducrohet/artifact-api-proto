@@ -4,6 +4,7 @@ package core.internal.impl
 import core.api.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
+import org.gradle.api.Transformer
 import org.gradle.api.file.*
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -189,43 +190,30 @@ abstract class MultiArtifactHolder<ArtifactT: MultiArtifactType<ValueT, Provider
         }
     }
 
-    fun <TaskT> transform(
+    fun <TaskT: DefaultTask> transform(
             artifactType : ArtifactT,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ): TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: ArtifactListConsumer<ValueT>, TaskT: ArtifactProducer<ValueT> {
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> ListProperty<ValueT>,
+            outputProvider: (TaskT) -> Property<ValueT>
+    ) {
         val info = map[artifactType] ?: throw RuntimeException("Did not find artifact for $artifactType")
-
-        val newTask = project.tasks.register(taskName, taskClass)
 
         // update the info with the new output and get the previous output. This will be used
         // to configure the input of the task
         val previousCurrent = info.setNewOutput(
-                newListProperty().also { w -> w.add(newTask.flatMap { it.outputArtifact })})
+                newListProperty().also { w -> w.add(taskProvider.flatMap { outputProvider(it) })})
 
-        newTask.configure {
-            // set input and register input with sensitivity
-            it.inputArtifacts.set(previousCurrent)
-            val inputBuilder = it.inputs
-                    .files(it.inputArtifacts)
-                    .withPropertyName("inputArtifacts")
-            if (artifactType.sensitivity != null) {
-                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-                inputBuilder.withPathSensitivity(artifactType.sensitivity)
-            } else if (artifactType.normalizer != null) {
-                @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-                inputBuilder.withNormalizer(artifactType.normalizer)
+        taskProvider.configure {
+            inputProvider(it).run {
+                set(previousCurrent)
+                disallowChanges()
             }
 
-            // set output location
-            setIntermediateLocation(it.outputArtifact, artifactType, it.name)
-
-            // run the user's configuration action
-            configAction.invoke(it)
+            outputProvider(it).run {
+                setIntermediateLocation(this, artifactType, it.name)
+                disallowChanges()
+            }
         }
-
-        return newTask
     }
 
     open fun <TaskT> append(

@@ -104,46 +104,42 @@ interface ArtifactHolder {
     /**
      * Transforms an artifact.
      *
-     * This registers the task of the given type and wires its input and output (based on [FileListConsumerTask] and
-     * [FileProducerTask])
+     * This configures the task input and output.
      *
      * The task must be able to consume more that one file and merge all the output in a single file.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @param taskProvider the provider for the task doing the transform
+     * @param inputProvider the lambda returning the input field of the task
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> transform(
+    fun <TaskT: DefaultTask> transform(
             artifactType : MultiFileArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: FileListConsumerTask, TaskT: FileProducerTask
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> ListProperty<RegularFile>,
+            outputProvider: (TaskT) -> RegularFileProperty
+    )
 
     /**
      * Transforms an artifact.
      *
-     * This registers the task of the given type and wires its input and output (based on [FileListConsumerTask] and
-     * [FileProducerTask])
+     * This configures the task input and output.
      *
      * The task must be able to consume more that one file and merge all the output in a single file.
      *
      * @param artifactType the type of the artifact to transform
-     * @param taskName the name of the task to register
-     * @param taskClass the type of the task to register.
-     * @param configAction a delayed config action to configure the task
-     * @return a [TaskProvider] for the newly created task
+     * @param taskProvider the provider for the task doing the transform
+     * @param inputProvider the lambda returning the input field of the task
+     * @param outputProvider the lambda returning the output field of the task
      *
      */
-    fun <TaskT> transform(
+    fun <TaskT: DefaultTask> transform(
             artifactType : MultiDirectoryArtifactType,
-            taskName: String,
-            taskClass: Class<TaskT>,
-            configAction: (TaskT) -> Unit
-    ) : TaskProvider<TaskT> where TaskT: DefaultTask, TaskT: DirectoryListConsumerTask, TaskT: DirectoryProducerTask
+            taskProvider: TaskProvider<TaskT>,
+            inputProvider: (TaskT) -> ListProperty<Directory>,
+            outputProvider: (TaskT) -> DirectoryProperty
+    )
 
     /**
      * Appends a task-generated Directory to an artifact.
@@ -246,10 +242,6 @@ interface FileProducerTask: ArtifactProducer<RegularFile> {
 
 interface FileListConsumerTask : ArtifactListConsumer<RegularFile> {
     override val inputArtifacts: ListProperty<RegularFile>
-}
-
-interface DirectoryListConsumerTask : ArtifactListConsumer<Directory> {
-    override val inputArtifacts: ListProperty<Directory>
 }
 
 // -------
